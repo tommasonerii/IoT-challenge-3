@@ -74,7 +74,7 @@
     "type": "function",
     "z": "c3_tab_main",
     "name": "reset counters + CSV headers",
-    "func": "flow.set('id_log_no', 0);\nflow.set('id_rx_count', 0);\nflow.set('filtered_no', 0);\nflow.set('link_costs', {});\nflow.set('link_order', []);\nflow.set('challenge_done', false);\nflow.set('thingspeak_started', false);\n\nreturn [\n    { payload: 'No.,ID,TIMESTAMP\\n' },\n    { payload: 'No.,Timestamp,Sequence Number, Attribute,Status,Data Type,Data Value\\n' },\n    { payload: 'No.,Source,Destination,Cost\\n' },\n    { payload: 'Challenge 3 state reset' }\n];",
+    "func": "flow.set('id_log_no', 0);\nflow.set('id_rx_count', 0);\nflow.set('filtered_no', 0);\nflow.set('link_costs', {});\nflow.set('link_order', []);\nflow.set('challenge_done', false);\nflow.set('thingspeak_started', false);\nflow.set('generator_enabled', false);\n\nreturn [\n    { payload: 'No.,ID,TIMESTAMP\\n' },\n    { payload: 'No.,Timestamp,Sequence Number, Attribute,Status,Data Type,Data Value\\n' },\n    { payload: 'No.,Source,Destination,Cost\\n' },\n    { payload: 'Challenge 3 state reset. Generator is stopped.' }\n];",
     "outputs": 4,
     "timeout": 0,
     "noerr": 0,
@@ -170,17 +170,87 @@
     "id": "c3_comment_generator",
     "type": "comment",
     "z": "c3_tab_main",
-    "name": "2) ID generator: every 1s -> MQTT publish + id_log.csv",
-    "info": "Publishes a JSON-formatted string to challenge3/id_generator and appends No.,ID,TIMESTAMP to id_log.csv.",
+    "name": "2) ID generator: press Start, then every 1s -> MQTT publish + id_log.csv",
+    "info": "Start generator enables generation. Stop generator disables it. Init/reset also disables generation.",
     "x": 300,
     "y": 230,
     "wires": []
   },
   {
+    "id": "c3_inject_start",
+    "type": "inject",
+    "z": "c3_tab_main",
+    "name": "Start generator",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "true",
+    "payloadType": "bool",
+    "x": 120,
+    "y": 250,
+    "wires": [
+      [
+        "c3_fn_set_generator"
+      ]
+    ]
+  },
+  {
+    "id": "c3_inject_stop",
+    "type": "inject",
+    "z": "c3_tab_main",
+    "name": "Stop generator",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "false",
+    "payloadType": "bool",
+    "x": 120,
+    "y": 300,
+    "wires": [
+      [
+        "c3_fn_set_generator"
+      ]
+    ]
+  },
+  {
+    "id": "c3_fn_set_generator",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "set generator enabled",
+    "func": "const enabled = msg.payload === true;\nflow.set('generator_enabled', enabled);\nmsg.payload = enabled ? 'Generator started' : 'Generator stopped';\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 275,
+    "wires": [
+      [
+        "c3_debug_init"
+      ]
+    ]
+  },
+  {
     "id": "c3_inject_generator",
     "type": "inject",
     "z": "c3_tab_main",
-    "name": "Generate ID every 1s",
+    "name": "1s generator tick",
     "props": [
       {
         "p": "payload"
@@ -197,8 +267,8 @@
     "topic": "",
     "payload": "",
     "payloadType": "date",
-    "x": 140,
-    "y": 280,
+    "x": 130,
+    "y": 350,
     "wires": [
       [
         "c3_fn_generate_id"
@@ -210,7 +280,7 @@
     "type": "function",
     "z": "c3_tab_main",
     "name": "generate MQTT ID + CSV row",
-    "func": "if (flow.get('challenge_done')) {\n    return null;\n}\n\nconst id = Math.floor(Math.random() * 30001);\nconst timestamp = Math.floor(Date.now() / 1000);\nconst no = (flow.get('id_log_no') || 0) + 1;\nflow.set('id_log_no', no);\n\nconst mqttMsg = {\n    topic: 'challenge3/id_generator',\n    payload: JSON.stringify({ id, timestamp })\n};\n\nconst csvMsg = {\n    payload: `${no},${id},${timestamp}\\n`\n};\n\nreturn [mqttMsg, csvMsg];",
+    "func": "if (!flow.get('generator_enabled')) {\n    return null;\n}\n\nif (flow.get('challenge_done')) {\n    flow.set('generator_enabled', false);\n    node.status({ fill: 'green', shape: 'ring', text: 'stopped after 200 received IDs' });\n    return null;\n}\n\nconst id = Math.floor(Math.random() * 30001);\nconst timestamp = Math.floor(Date.now() / 1000);\nconst no = (flow.get('id_log_no') || 0) + 1;\nflow.set('id_log_no', no);\nnode.status({ fill: 'blue', shape: 'dot', text: `generated ${no}` });\n\nconst mqttMsg = {\n    topic: 'challenge3/id_generator',\n    payload: JSON.stringify({ id, timestamp })\n};\n\nconst csvMsg = {\n    payload: `${no},${id},${timestamp}\\n`\n};\n\nreturn [mqttMsg, csvMsg];",
     "outputs": 2,
     "timeout": 0,
     "noerr": 0,
@@ -218,7 +288,7 @@
     "finalize": "",
     "libs": [],
     "x": 390,
-    "y": 280,
+    "y": 350,
     "wires": [
       [
         "c3_mqtt_id_out"
@@ -243,7 +313,7 @@
     "expiry": "",
     "broker": "c3_broker_local",
     "x": 710,
-    "y": 260,
+    "y": 330,
     "wires": []
   },
   {
@@ -258,7 +328,7 @@
     "overwriteFile": "false",
     "encoding": "none",
     "x": 680,
-    "y": 310,
+    "y": 380,
     "wires": [
       []
     ]
@@ -418,7 +488,7 @@
     "type": "function",
     "z": "c3_tab_main",
     "name": "prepare ZBEE_ZCL MQTT payload",
-    "func": "const row = msg.csvRow;\nconst dev = row['Device Name ZigBee Source'];\nconst topic = `ZigBee/${dev}`;\nconst currentTimestamp = Math.floor(Date.now() / 1000);\n\nmsg.topic = topic;\nmsg.currentTimestamp = currentTimestamp;\nmsg.payload = JSON.stringify({\n    timestamp: currentTimestamp,\n    id: msg.sub_id,\n    'wpan.src': row['Source Address'],\n    'wpan.dst': row['Destination Address'],\n    'zbee.src': row['Source Address ZigBee'],\n    'zbee.dst': row['Destination Address ZigBee'],\n    topic: topic,\n    payload: row['Command String']\n});\n\nreturn msg;",
+    "func": "const row = msg.csvRow;\nconst rawDev = row['Device Name ZigBee Source'];\nconst dev = String(rawDev || '').trim().replace(/[#+\\u0000]/g, '_');\n\nif (!dev) {\n    node.warn('Missing Device Name ZigBee Source, skipping ZBEE_ZCL publish');\n    return null;\n}\n\nconst topic = 'ZigBee/' + dev;\nconst currentTimestamp = Math.floor(Date.now() / 1000);\n\nmsg.topic = topic;\nmsg.currentTimestamp = currentTimestamp;\nmsg.payload = JSON.stringify({\n    timestamp: currentTimestamp,\n    id: msg.sub_id,\n    'wpan.src': row['Source Address'],\n    'wpan.dst': row['Destination Address'],\n    'zbee.src': row['Source Address ZigBee'],\n    'zbee.dst': row['Destination Address ZigBee'],\n    topic: topic,\n    payload: row['Command String']\n});\n\nreturn msg;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -481,8 +551,8 @@
     "id": "c3_fn_filtered_attrs",
     "type": "function",
     "z": "c3_tab_main",
-    "name": "TODO parse filtered attrs",
-    "func": "/*\nTODO:\n- Parse msg.commandString / msg.csvRow['Command String'].\n- Keep only Active Power, RMS Current, RMS Voltage.\n- Only output rows where Status, Data Type and Data Value are present.\n- Preserve positional matching: Attribute[i], Status[i], Data Type[i], Value[i].\n\nExpected output 1: CSV lines for filtered_elems.csv.\nExpected output 2: chart messages for RMS Current.\nExpected output 3: chart messages for RMS Voltage.\n*/\nreturn [null, null, null];",
+    "name": "parse filtered attrs",
+    "func": "function parseCommandString(text) {\n    try {\n        return JSON.parse(String(text || '').replace(/'/g, '\"'));\n    } catch (err) {\n        node.warn('Cannot parse Command String: ' + err.message);\n        return null;\n    }\n}\n\nfunction asArray(value) {\n    if (Array.isArray(value)) return value;\n    if (value === undefined || value === null || value === '') return [];\n    return [value];\n}\n\nfunction cleanLabel(value) {\n    return String(value || '').replace(/\\s*\\([^)]*\\)/g, '').trim();\n}\n\nfunction valueKeyForType(dataType) {\n    const t = String(dataType || '').toLowerCase();\n    if (t.includes('16-bit signed integer')) return 'Int16';\n    if (t.includes('16-bit unsigned integer')) return 'Uint16';\n    if (t.includes('8-bit signed integer')) return 'Int8';\n    if (t.includes('8-bit unsigned integer')) return 'Uint8';\n    if (t.includes('32-bit signed integer')) return 'Int32';\n    if (t.includes('32-bit unsigned integer')) return 'Uint32';\n    if (t.includes('48-bit unsigned integer')) return 'Uint48';\n    return null;\n}\n\nfunction rawValueAt(command, dataTypes, index) {\n    const key = valueKeyForType(dataTypes[index]);\n    if (!key || command[key] === undefined || command[key] === null) return null;\n\n    const values = command[key];\n    const sameTypeIndex = dataTypes.slice(0, index + 1)\n        .filter(dt => valueKeyForType(dt) === key).length - 1;\n\n    if (Array.isArray(values)) return values[sameTypeIndex] !== undefined ? values[sameTypeIndex] : null;\n    return sameTypeIndex === 0 ? values : null;\n}\n\nfunction cleanValue(value) {\n    const text = String(value || '').trim();\n    const match = text.match(/^-?\\d+(?:\\.\\d+)?/);\n    return match ? match[0] : text;\n}\n\nconst command = parseCommandString(msg.csvRow && msg.csvRow['Command String']);\nif (!command) return null;\n\nconst attrs = asArray(command.Attribute);\nconst statuses = asArray(command.Status);\nconst dataTypes = asArray(command['Data Type']);\nconst wanted = ['Active Power', 'RMS Current', 'RMS Voltage'];\nconst timestamp = msg.currentTimestamp || Math.floor(Date.now() / 1000);\nconst seq = command['Sequence Number'];\n\nconst csvMsgs = [];\nconst currentMsgs = [];\nconst voltageMsgs = [];\n\nfor (let i = 0; i < attrs.length; i++) {\n    const attr = cleanLabel(attrs[i]);\n    if (!wanted.includes(attr)) continue;\n\n    const statusRaw = statuses[i];\n    const dataTypeRaw = dataTypes[i];\n    const valueRaw = rawValueAt(command, dataTypes, i);\n\n    if (statusRaw === undefined || dataTypeRaw === undefined || valueRaw === null) {\n        continue;\n    }\n\n    const no = (flow.get('filtered_no') || 0) + 1;\n    flow.set('filtered_no', no);\n\n    const status = cleanLabel(statusRaw);\n    const dataType = cleanLabel(dataTypeRaw);\n    const value = cleanValue(valueRaw);\n    const csvLine = no + ',' + timestamp + ',' + seq + ',' + attr + ',' + status + ',' + dataType + ',' + value + '\\n';\n    csvMsgs.push({ payload: csvLine });\n\n    const numericValue = Number(value);\n    if (Number.isFinite(numericValue) && attr === 'RMS Current') {\n        currentMsgs.push({ payload: numericValue, topic: 'RMS Current' });\n    }\n    if (Number.isFinite(numericValue) && attr === 'RMS Voltage') {\n        voltageMsgs.push({ payload: numericValue, topic: 'RMS Voltage' });\n    }\n}\n\nif (csvMsgs.length || currentMsgs.length || voltageMsgs.length) {\n    node.send([\n        csvMsgs.length ? csvMsgs : null,\n        currentMsgs.length ? currentMsgs : null,\n        voltageMsgs.length ? voltageMsgs : null\n    ]);\n}\n\nreturn null;",
     "outputs": 3,
     "timeout": 0,
     "noerr": 0,
@@ -604,8 +674,8 @@
     "id": "c3_fn_link_status",
     "type": "function",
     "z": "c3_tab_main",
-    "name": "TODO parse Link Status",
-    "func": "/*\nTODO:\n- Parse msg.csvRow['Command String'].\n- Source = msg.csvRow['Source Address ZigBee'].\n- For each Links[i], destination = Address, cost = Outgoing Cost.\n- Update final cost for each source/destination pair.\n- Preserve first processing order in flow.get('link_order').\n- Output a complete outgoing_cost.csv string with header.\n*/\nreturn null;",
+    "name": "parse Link Status",
+    "func": "function parseCommandString(text) {\n    try {\n        return JSON.parse(String(text || '').replace(/'/g, '\"'));\n    } catch (err) {\n        node.warn('Cannot parse Link Status Command String: ' + err.message);\n        return null;\n    }\n}\n\nconst row = msg.csvRow;\nconst command = parseCommandString(row && row['Command String']);\nif (!command || !Array.isArray(command.Links)) return null;\n\nconst source = row['Source Address ZigBee'];\nif (!source) return null;\n\nconst costs = flow.get('link_costs') || {};\nconst order = flow.get('link_order') || [];\n\nfor (const link of command.Links) {\n    const destination = link.Address;\n    const cost = link['Outgoing Cost'];\n    if (!destination || cost === undefined || cost === null) continue;\n\n    const key = source + '|' + destination;\n    if (!costs[key]) {\n        order.push({ source: source, destination: destination });\n    }\n    costs[key] = { source: source, destination: destination, cost: String(cost) };\n}\n\nflow.set('link_costs', costs);\nflow.set('link_order', order);\n\nlet csv = 'No.,Source,Destination,Cost\\n';\nlet no = 1;\nfor (const item of order) {\n    const key = item.source + '|' + item.destination;\n    const current = costs[key];\n    if (!current) continue;\n    csv += no + ',' + current.source + ',' + current.destination + ',' + current.cost + '\\n';\n    no += 1;\n}\n\nreturn { payload: csv };",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,
@@ -634,8 +704,8 @@
     "id": "c3_fn_prepare_thingspeak",
     "type": "function",
     "z": "c3_tab_main",
-    "name": "TODO prepare ThingSpeak messages",
-    "func": "/*\nTODO:\n- Read flow.get('link_costs') and flow.get('link_order').\n- Find smallest Source as hexadecimal number.\n- For that source, sort destinations as hexadecimal numbers.\n- Create one msg per destination:\n    msg.url = 'https://api.thingspeak.com/update?api_key=WRITE_API_KEY&field1=' + cost\n- Return an array of messages so the delay node queues them.\n*/\nreturn null;",
+    "name": "prepare ThingSpeak messages",
+    "func": "const WRITE_API_KEY = env.get('THINGSPEAK_WRITE_API_KEY');\n\nif (!WRITE_API_KEY) {\n    node.warn('THINGSPEAK_WRITE_API_KEY is not configured; skipping HTTP updates');\n    return null;\n}\n\nconst costs = flow.get('link_costs') || {};\nconst order = flow.get('link_order') || [];\nconst sources = Array.from(new Set(order.map(item => item.source)));\n\nif (sources.length === 0) {\n    node.warn('No outgoing costs available for ThingSpeak');\n    return null;\n}\n\nsources.sort((a, b) => parseInt(a, 16) - parseInt(b, 16));\nconst minSource = sources[0];\nconst destinations = order\n    .filter(item => item.source === minSource)\n    .map(item => item.destination)\n    .filter((value, index, arr) => arr.indexOf(value) === index)\n    .sort((a, b) => parseInt(a, 16) - parseInt(b, 16));\n\nfor (const destination of destinations) {\n    const key = minSource + '|' + destination;\n    const item = costs[key];\n    if (!item) continue;\n\n    node.send({\n        url: 'https://api.thingspeak.com/update?api_key=' + WRITE_API_KEY + '&field1=' + encodeURIComponent(item.cost),\n        payload: item.cost,\n        source: minSource,\n        destination: destination\n    });\n}\n\nreturn null;",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,

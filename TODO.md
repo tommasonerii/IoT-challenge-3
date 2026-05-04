@@ -63,112 +63,112 @@ No.,Source,Destination,Cost
 
 ## 3. Flow Node-RED - Generatore ID
 
-- [ ] Creare ramo `inject -> function -> mqtt out`.
-- [ ] Configurare `inject` ogni 1 secondo.
-- [ ] In `function`, generare `id` random tra 0 e 30000.
-- [ ] In `function`, generare UNIX timestamp.
-- [ ] Pubblicare su topic:
+- [x] Creare ramo `inject -> function -> mqtt out`.
+- [x] Configurare tick ogni 1 secondo, controllato da `Start generator` / `Stop generator`.
+- [x] In `function`, generare `id` random tra 0 e 30000.
+- [x] In `function`, generare UNIX timestamp.
+- [x] Pubblicare su topic:
 
 ```text
 challenge3/id_generator
 ```
 
-- [ ] Configurare broker MQTT:
+- [x] Configurare broker MQTT:
 
 ```text
 localhost:1884
 ```
 
-- [ ] Salvare ogni ID generato in `id_log.csv`.
-- [ ] Controllare che il CSV abbia `No.` incrementale.
+- [x] Salvare ogni ID generato in `id_log.csv`.
+- [x] Controllare che il CSV abbia `No.` incrementale.
 
 ## 4. Flow Node-RED - Subscription ID
 
-- [ ] Creare ramo `mqtt in` sul topic:
+- [x] Creare ramo `mqtt in` sul topic:
 
 ```text
 challenge3/id_generator
 ```
 
-- [ ] Parsare il payload JSON ricevuto.
-- [ ] Contare gli ID ricevuti.
-- [ ] Fermare il processing dopo esattamente 200 ID.
-- [ ] Calcolare:
+- [x] Parsare il payload JSON ricevuto.
+- [x] Contare gli ID ricevuti.
+- [x] Fermare il processing dopo esattamente 200 ID.
+- [x] Calcolare:
 
 ```text
 N = id % 5218
 ```
 
-- [ ] Leggere/cercare nel CSV la riga con `Packet Number = N`.
-- [ ] Ignorare righe non `ZBEE_ZCL` e non `Link Status`, contando comunque l'ID.
+- [x] Leggere/cercare nel CSV la riga con `Packet Number = N`.
+- [x] Ignorare righe non `ZBEE_ZCL` e non `Link Status`, contando comunque l'ID.
 
 ## 5. Caso ZBEE_ZCL
 
-- [ ] Rilevare se `Command String` contiene `ZBEE_ZCL`.
-- [ ] Creare topic MQTT:
+- [x] Rilevare se `Command String` contiene `ZBEE_ZCL`.
+- [x] Creare topic MQTT:
 
 ```text
 ZigBee/<Device Name ZigBee Source>
 ```
 
-- [ ] Creare payload con:
-  - [ ] `timestamp`
-  - [ ] `id`
-  - [ ] `wpan.src`
-  - [ ] `wpan.dst`
-  - [ ] `zbee.src`
-  - [ ] `zbee.dst`
-  - [ ] `topic`
-  - [ ] `payload`
+- [x] Creare payload con:
+  - [x] `timestamp`
+  - [x] `id`
+  - [x] `wpan.src`
+  - [x] `wpan.dst`
+  - [x] `zbee.src`
+  - [x] `zbee.dst`
+  - [x] `topic`
+  - [x] `payload`
 
-- [ ] Verificare che `msg.topic` sia uguale a `msg.payload.topic`.
-- [ ] Configurare `mqtt out`.
-- [ ] Aggiungere rate limiter a 10 messaggi/minuto.
-- [ ] Configurare il rate limiter in queue, non drop.
+- [x] Verificare che `msg.topic` sia uguale a `msg.payload.topic`.
+- [x] Configurare `mqtt out`.
+- [x] Aggiungere rate limiter a 10 messaggi/minuto.
+- [x] Configurare il rate limiter in queue, non drop.
 
 ## 6. Parsing attributi filtrati
 
-- [ ] Dopo la publish ZBEE_ZCL, controllare attributi:
-  - [ ] `Active Power`
-  - [ ] `RMS Current`
-  - [ ] `RMS Voltage`
+- [x] Dopo la publish ZBEE_ZCL, controllare attributi:
+  - [x] `Active Power`
+  - [x] `RMS Current`
+  - [x] `RMS Voltage`
 
-- [ ] Considerare solo attributi con campi completi:
-  - [ ] `Status`
-  - [ ] `Data Type`
-  - [ ] valore numerico
+- [x] Considerare solo attributi con campi completi:
+  - [x] `Status`
+  - [x] `Data Type`
+  - [x] valore numerico
 
-- [ ] Escludere attributi incompleti.
-- [ ] Non scrivere celle vuote.
-- [ ] Mantenere matching posizionale:
+- [x] Escludere attributi incompleti.
+- [x] Non scrivere celle vuote.
+- [x] Mantenere matching posizionale:
 
 ```text
 Attribute[i] -> Status[i] -> Data Type[i] -> Value[i]
 ```
 
-- [ ] Scrivere righe complete in `filtered_elems.csv`.
-- [ ] Inviare valori `RMS Current` a chart dedicato.
-- [ ] Inviare valori `RMS Voltage` a chart dedicato.
+- [x] Scrivere righe complete in `filtered_elems.csv`.
+- [x] Inviare valori `RMS Current` a chart dedicato.
+- [x] Inviare valori `RMS Voltage` a chart dedicato.
 - [ ] Fare screenshot dei chart per `Challenge.pdf`.
 
 ## 7. Caso Link Status
 
-- [ ] Rilevare:
+- [x] Rilevare:
 
 ```text
 Packet Type = Link Status (0x08)
 ```
 
-- [ ] Parsare `Command String`.
-- [ ] Estrarre `Links`.
-- [ ] Per ogni link, ricavare:
-  - [ ] source = `Source Address ZigBee`
-  - [ ] destination = `Links[i].Address`
-  - [ ] cost = `Links[i].Outgoing Cost`
+- [x] Parsare `Command String`.
+- [x] Estrarre `Links`.
+- [x] Per ogni link, ricavare:
+  - [x] source = `Source Address ZigBee`
+  - [x] destination = `Links[i].Address`
+  - [x] cost = `Links[i].Outgoing Cost`
 
-- [ ] Aggiornare il costo se arriva una nuova coppia source/destination.
-- [ ] Preservare l'ordine di ricezione/processing.
-- [ ] Scrivere `outgoing_cost.csv` senza ordinare per source/destination.
+- [x] Aggiornare il costo se arriva una nuova coppia source/destination.
+- [x] Preservare l'ordine di ricezione/processing.
+- [x] Scrivere `outgoing_cost.csv` senza ordinare per source/destination.
 
 ## 8. ThingSpeak
 
@@ -272,4 +272,3 @@ Per team da due:
 ```text
 12 maggio 2026, 23:59
 ```
-

@@ -259,6 +259,48 @@ Per i chart installare la dashboard:
 Menu -> Manage palette -> Install -> node-red-dashboard
 ```
 
+### Script di avvio automatico
+
+E' disponibile uno script Python per avviare Mosquitto e Node-RED insieme:
+
+```powershell
+conda run -n iot-challenge python scripts\start_challenge_env.py
+```
+
+Lo script:
+
+- avvia Mosquitto su `localhost:1884`;
+- avvia Node-RED su `localhost:1880`;
+- scrive i log in `logs/`;
+- si ferma con `Ctrl+C`, chiudendo i processi avviati dallo script.
+
+Se Node-RED deve usare esplicitamente il flow del repository:
+
+```powershell
+conda run -n iot-challenge python scripts\start_challenge_env.py --flow code\flows.json
+```
+
+Se Mosquitto o Node-RED sono gia' aperti, lo script rileva la porta occupata e non avvia un duplicato.
+
+### Segreti locali
+
+Non committare la Write API Key di ThingSpeak dentro `code/flows.json`.
+Il flow legge la chiave da variabile d'ambiente:
+
+```text
+THINGSPEAK_WRITE_API_KEY
+```
+
+Per configurarla localmente, copia `.env.example` in `.env` e inserisci la tua key:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Il file `.env` e' gia' ignorato da Git tramite `.gitignore`.
+Lo script `scripts/start_challenge_env.py` carica `.env` e passa la variabile a Node-RED.
+
 ## Part 1 - Flow Node-RED richiesto
 
 ### Ramo 1: generatore ID
@@ -724,4 +766,3 @@ Regole:
 - Max 2 persone.
 - Compilare il form.
 - Errori di nome file, form mancante o estensioni sbagliate causano penalita'.
-
