@@ -301,6 +301,16 @@ notepad .env
 Il file `.env` e' gia' ignorato da Git tramite `.gitignore`.
 Lo script `scripts/start_challenge_env.py` carica `.env` e passa la variabile a Node-RED.
 
+### Grafici da CSV per il report
+
+Dopo una run completa, e' possibile generare grafici PNG dai CSV finali:
+
+```powershell
+conda run -n iot-challenge python scripts\plot_challenge_outputs.py
+```
+
+I grafici vengono salvati in `report_assets/`.
+
 ## Part 1 - Flow Node-RED richiesto
 
 ### Ramo 1: generatore ID
