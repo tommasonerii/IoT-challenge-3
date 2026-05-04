@@ -1,76 +1,734 @@
 [
-    {
-        "id": "34285e8280b2b10a",
-        "type": "tab",
-        "label": "Flow 1",
-        "disabled": false,
-        "info": "",
-        "env": []
-    },
-    {
-        "id": "89fca454da36f3b7",
-        "type": "inject",
-        "z": "34285e8280b2b10a",
-        "name": "",
-        "props": [
-            {
-                "p": "payload"
-            },
-            {
-                "p": "topic",
-                "vt": "str"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 120,
-        "y": 120,
-        "wires": [
-            [
-                "7ec297ed3264063b"
-            ]
-        ]
-    },
-    {
-        "id": "7ec297ed3264063b",
-        "type": "function",
-        "z": "34285e8280b2b10a",
-        "name": "function 1",
-        "func": "\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 280,
-        "y": 120,
-        "wires": [
-            [
-                "57bad78f64d6dfc6"
-            ]
-        ]
-    },
-    {
-        "id": "57bad78f64d6dfc6",
-        "type": "mqtt out",
-        "z": "34285e8280b2b10a",
-        "name": "",
-        "topic": "",
-        "qos": "",
-        "retain": "",
-        "respTopic": "",
-        "contentType": "",
-        "userProps": "",
-        "correl": "",
-        "expiry": "",
-        "x": 450,
-        "y": 120,
-        "wires": []
-    }
+  {
+    "id": "c3_tab_main",
+    "type": "tab",
+    "label": "Challenge 3 - Base Layout",
+    "disabled": false,
+    "info": "Base layout for IoT Challenge 3: ID generator, MQTT subscription, CSV dispatch, ZBEE_ZCL branch, Link Status branch, ThingSpeak branch and dashboard charts.",
+    "env": []
+  },
+  {
+    "id": "c3_broker_local",
+    "type": "mqtt-broker",
+    "name": "Local Mosquitto 1884",
+    "broker": "localhost",
+    "port": "1884",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "c3_comment_setup",
+    "type": "comment",
+    "z": "c3_tab_main",
+    "name": "1) Start here: init/reset CSV files and counters",
+    "info": "Click this inject before running the challenge. It resets flow counters and rewrites CSV headers.",
+    "x": 250,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "c3_inject_init",
+    "type": "inject",
+    "z": "c3_tab_main",
+    "name": "Init/reset files",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 120,
+    "y": 90,
+    "wires": [
+      [
+        "c3_fn_init"
+      ]
+    ]
+  },
+  {
+    "id": "c3_fn_init",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "reset counters + CSV headers",
+    "func": "flow.set('id_log_no', 0);\nflow.set('id_rx_count', 0);\nflow.set('filtered_no', 0);\nflow.set('link_costs', {});\nflow.set('link_order', []);\nflow.set('challenge_done', false);\nflow.set('thingspeak_started', false);\n\nreturn [\n    { payload: 'No.,ID,TIMESTAMP\\n' },\n    { payload: 'No.,Timestamp,Sequence Number, Attribute,Status,Data Type,Data Value\\n' },\n    { payload: 'No.,Source,Destination,Cost\\n' },\n    { payload: 'Challenge 3 state reset' }\n];",
+    "outputs": 4,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 90,
+    "wires": [
+      [
+        "c3_file_idlog_overwrite"
+      ],
+      [
+        "c3_file_filtered_overwrite"
+      ],
+      [
+        "c3_file_outgoing_overwrite"
+      ],
+      [
+        "c3_debug_init"
+      ]
+    ]
+  },
+  {
+    "id": "c3_file_idlog_overwrite",
+    "type": "file",
+    "z": "c3_tab_main",
+    "name": "write id_log.csv header",
+    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\id_log.csv",
+    "filenameType": "str",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "true",
+    "encoding": "none",
+    "x": 620,
+    "y": 50,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "c3_file_filtered_overwrite",
+    "type": "file",
+    "z": "c3_tab_main",
+    "name": "write filtered_elems.csv header",
+    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\filtered_elems.csv",
+    "filenameType": "str",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "true",
+    "encoding": "none",
+    "x": 650,
+    "y": 90,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "c3_file_outgoing_overwrite",
+    "type": "file",
+    "z": "c3_tab_main",
+    "name": "write outgoing_cost.csv",
+    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\outgoing_cost.csv",
+    "filenameType": "str",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "true",
+    "encoding": "none",
+    "x": 620,
+    "y": 130,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "c3_debug_init",
+    "type": "debug",
+    "z": "c3_tab_main",
+    "name": "init debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 590,
+    "y": 170,
+    "wires": []
+  },
+  {
+    "id": "c3_comment_generator",
+    "type": "comment",
+    "z": "c3_tab_main",
+    "name": "2) ID generator: every 1s -> MQTT publish + id_log.csv",
+    "info": "Publishes a JSON-formatted string to challenge3/id_generator and appends No.,ID,TIMESTAMP to id_log.csv.",
+    "x": 300,
+    "y": 230,
+    "wires": []
+  },
+  {
+    "id": "c3_inject_generator",
+    "type": "inject",
+    "z": "c3_tab_main",
+    "name": "Generate ID every 1s",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "1",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 280,
+    "wires": [
+      [
+        "c3_fn_generate_id"
+      ]
+    ]
+  },
+  {
+    "id": "c3_fn_generate_id",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "generate MQTT ID + CSV row",
+    "func": "if (flow.get('challenge_done')) {\n    return null;\n}\n\nconst id = Math.floor(Math.random() * 30001);\nconst timestamp = Math.floor(Date.now() / 1000);\nconst no = (flow.get('id_log_no') || 0) + 1;\nflow.set('id_log_no', no);\n\nconst mqttMsg = {\n    topic: 'challenge3/id_generator',\n    payload: JSON.stringify({ id, timestamp })\n};\n\nconst csvMsg = {\n    payload: `${no},${id},${timestamp}\\n`\n};\n\nreturn [mqttMsg, csvMsg];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 280,
+    "wires": [
+      [
+        "c3_mqtt_id_out"
+      ],
+      [
+        "c3_file_idlog_append"
+      ]
+    ]
+  },
+  {
+    "id": "c3_mqtt_id_out",
+    "type": "mqtt out",
+    "z": "c3_tab_main",
+    "name": "publish challenge3/id_generator",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "c3_broker_local",
+    "x": 710,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "c3_file_idlog_append",
+    "type": "file",
+    "z": "c3_tab_main",
+    "name": "append id_log.csv",
+    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\id_log.csv",
+    "filenameType": "str",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "none",
+    "x": 680,
+    "y": 310,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "c3_comment_sub",
+    "type": "comment",
+    "z": "c3_tab_main",
+    "name": "3) Subscriber: count 200 IDs, compute N, read challenge3.csv, classify packet",
+    "info": "The CSV node must output one array message. If it outputs one message per row, change its mode in the node settings.",
+    "x": 390,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "c3_mqtt_id_in",
+    "type": "mqtt in",
+    "z": "c3_tab_main",
+    "name": "subscribe IDs",
+    "topic": "challenge3/id_generator",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "c3_broker_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 110,
+    "y": 430,
+    "wires": [
+      [
+        "c3_fn_count_id"
+      ]
+    ]
+  },
+  {
+    "id": "c3_fn_count_id",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "count <=200 + N=id%5218",
+    "func": "if (flow.get('challenge_done')) {\n    return null;\n}\n\nlet payload = msg.payload;\nif (typeof payload === 'string') {\n    payload = JSON.parse(payload);\n}\n\nconst id = Number(payload.id);\nif (!Number.isFinite(id)) {\n    node.error('Invalid ID payload', msg);\n    return null;\n}\n\nconst count = (flow.get('id_rx_count') || 0) + 1;\nflow.set('id_rx_count', count);\n\nmsg.sub_id = id;\nmsg.sub_timestamp = payload.timestamp;\nmsg.id_rx_count = count;\nmsg.N = id % 5218;\n\nif (count >= 200) {\n    flow.set('challenge_done', true);\n}\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 430,
+    "wires": [
+      [
+        "c3_filein_csv"
+      ]
+    ]
+  },
+  {
+    "id": "c3_filein_csv",
+    "type": "file in",
+    "z": "c3_tab_main",
+    "name": "read challenge3.csv",
+    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\docs\\challenge3.csv",
+    "filenameType": "str",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": true,
+    "encoding": "none",
+    "allProps": false,
+    "x": 590,
+    "y": 430,
+    "wires": [
+      [
+        "c3_csv_parse"
+      ]
+    ]
+  },
+  {
+    "id": "c3_csv_parse",
+    "type": "csv",
+    "z": "c3_tab_main",
+    "name": "parse CSV to array",
+    "sep": ",",
+    "hdrin": true,
+    "hdrout": "none",
+    "multi": "one",
+    "ret": "\\n",
+    "temp": "",
+    "skip": "0",
+    "strings": true,
+    "include_empty_strings": "",
+    "include_null_values": "",
+    "x": 810,
+    "y": 430,
+    "wires": [
+      [
+        "c3_fn_select_classify"
+      ]
+    ]
+  },
+  {
+    "id": "c3_fn_select_classify",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "select Packet Number N + classify",
+    "func": "let row = null;\n\nif (Array.isArray(msg.payload)) {\n    row = msg.payload.find(r => Number(r['Packet Number']) === Number(msg.N));\n} else if (msg.payload && typeof msg.payload === 'object') {\n    if (Number(msg.payload['Packet Number']) !== Number(msg.N)) {\n        return null;\n    }\n    row = msg.payload;\n} else {\n    node.error('Unexpected CSV payload format', msg);\n    return null;\n}\n\nif (!row) {\n    node.warn(`No CSV row found for Packet Number ${msg.N}`);\n    return null;\n}\n\nmsg.csvRow = row;\nmsg.commandString = row['Command String'] || '';\n\nconst isZcl = msg.commandString.includes('ZBEE_ZCL');\nconst isLinkStatus = row['Packet Type'] === 'Link Status (0x08)';\n\nlet doneMsg = null;\nif (flow.get('challenge_done') && !flow.get('thingspeak_started')) {\n    flow.set('thingspeak_started', true);\n    doneMsg = { payload: '200 ID messages processed' };\n}\n\nif (isZcl) {\n    return [msg, null, doneMsg, null];\n}\nif (isLinkStatus) {\n    return [null, msg, doneMsg, null];\n}\nreturn [null, null, doneMsg, msg];",
+    "outputs": 4,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1080,
+    "y": 430,
+    "wires": [
+      [
+        "c3_fn_prepare_zcl"
+      ],
+      [
+        "c3_fn_link_status"
+      ],
+      [
+        "c3_fn_prepare_thingspeak"
+      ],
+      [
+        "c3_debug_ignored"
+      ]
+    ]
+  },
+  {
+    "id": "c3_debug_ignored",
+    "type": "debug",
+    "z": "c3_tab_main",
+    "name": "ignored packet debug",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "N",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1330,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "c3_comment_zcl",
+    "type": "comment",
+    "z": "c3_tab_main",
+    "name": "4) ZBEE_ZCL: publish to ZigBee/<device>, queue rate limit 10/min, then filtered_elems + charts",
+    "info": "Topic must be ZigBee/<Device Name ZigBee Source>. Delay node must queue, not drop.",
+    "x": 450,
+    "y": 590,
+    "wires": []
+  },
+  {
+    "id": "c3_fn_prepare_zcl",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "prepare ZBEE_ZCL MQTT payload",
+    "func": "const row = msg.csvRow;\nconst dev = row['Device Name ZigBee Source'];\nconst topic = `ZigBee/${dev}`;\nconst currentTimestamp = Math.floor(Date.now() / 1000);\n\nmsg.topic = topic;\nmsg.currentTimestamp = currentTimestamp;\nmsg.payload = JSON.stringify({\n    timestamp: currentTimestamp,\n    id: msg.sub_id,\n    'wpan.src': row['Source Address'],\n    'wpan.dst': row['Destination Address'],\n    'zbee.src': row['Source Address ZigBee'],\n    'zbee.dst': row['Destination Address ZigBee'],\n    topic: topic,\n    payload: row['Command String']\n});\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 260,
+    "y": 650,
+    "wires": [
+      [
+        "c3_delay_zcl"
+      ]
+    ]
+  },
+  {
+    "id": "c3_delay_zcl",
+    "type": "delay",
+    "z": "c3_tab_main",
+    "name": "rate limit 10/min queue",
+    "pauseType": "rate",
+    "timeout": "5",
+    "timeoutUnits": "seconds",
+    "rate": "10",
+    "nbRateUnits": "1",
+    "rateUnits": "minute",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 520,
+    "y": 650,
+    "wires": [
+      [
+        "c3_mqtt_zcl_out",
+        "c3_fn_filtered_attrs"
+      ]
+    ]
+  },
+  {
+    "id": "c3_mqtt_zcl_out",
+    "type": "mqtt out",
+    "z": "c3_tab_main",
+    "name": "publish ZigBee/<device>",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "c3_broker_local",
+    "x": 800,
+    "y": 620,
+    "wires": []
+  },
+  {
+    "id": "c3_fn_filtered_attrs",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "TODO parse filtered attrs",
+    "func": "/*\nTODO:\n- Parse msg.commandString / msg.csvRow['Command String'].\n- Keep only Active Power, RMS Current, RMS Voltage.\n- Only output rows where Status, Data Type and Data Value are present.\n- Preserve positional matching: Attribute[i], Status[i], Data Type[i], Value[i].\n\nExpected output 1: CSV lines for filtered_elems.csv.\nExpected output 2: chart messages for RMS Current.\nExpected output 3: chart messages for RMS Voltage.\n*/\nreturn [null, null, null];",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 790,
+    "y": 700,
+    "wires": [
+      [
+        "c3_file_filtered_append"
+      ],
+      [
+        "c3_chart_current"
+      ],
+      [
+        "c3_chart_voltage"
+      ]
+    ]
+  },
+  {
+    "id": "c3_file_filtered_append",
+    "type": "file",
+    "z": "c3_tab_main",
+    "name": "append filtered_elems.csv",
+    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\filtered_elems.csv",
+    "filenameType": "str",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "none",
+    "x": 1070,
+    "y": 660,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "c3_chart_current",
+    "type": "ui_chart",
+    "z": "c3_tab_main",
+    "name": "RMS Current chart",
+    "group": "c3_ui_group",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "label": "RMS Current",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": 1,
+    "removeOlderPoints": "",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "useOneColor": false,
+    "colors": [
+      "#1f77b4",
+      "#aec7e8",
+      "#ff7f0e"
+    ],
+    "useOldStyle": false,
+    "x": 1060,
+    "y": 710,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "c3_chart_voltage",
+    "type": "ui_chart",
+    "z": "c3_tab_main",
+    "name": "RMS Voltage chart",
+    "group": "c3_ui_group",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "label": "RMS Voltage",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": 1,
+    "removeOlderPoints": "",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "useOneColor": false,
+    "colors": [
+      "#d62728",
+      "#ff9896",
+      "#2ca02c"
+    ],
+    "useOldStyle": false,
+    "x": 1060,
+    "y": 760,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "c3_comment_link",
+    "type": "comment",
+    "z": "c3_tab_main",
+    "name": "5) Link Status: update final costs, preserve processing order in outgoing_cost.csv",
+    "info": "Do not sort outgoing_cost.csv. Sort only later for ThingSpeak.",
+    "x": 410,
+    "y": 840,
+    "wires": []
+  },
+  {
+    "id": "c3_fn_link_status",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "TODO parse Link Status",
+    "func": "/*\nTODO:\n- Parse msg.csvRow['Command String'].\n- Source = msg.csvRow['Source Address ZigBee'].\n- For each Links[i], destination = Address, cost = Outgoing Cost.\n- Update final cost for each source/destination pair.\n- Preserve first processing order in flow.get('link_order').\n- Output a complete outgoing_cost.csv string with header.\n*/\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 230,
+    "y": 900,
+    "wires": [
+      [
+        "c3_file_outgoing_overwrite"
+      ]
+    ]
+  },
+  {
+    "id": "c3_comment_thingspeak",
+    "type": "comment",
+    "z": "c3_tab_main",
+    "name": "6) After 200 IDs: smallest source, sort destinations hex, send costs to ThingSpeak every 20s",
+    "info": "Put your ThingSpeak WRITE_API_KEY in the prepare function.",
+    "x": 450,
+    "y": 980,
+    "wires": []
+  },
+  {
+    "id": "c3_fn_prepare_thingspeak",
+    "type": "function",
+    "z": "c3_tab_main",
+    "name": "TODO prepare ThingSpeak messages",
+    "func": "/*\nTODO:\n- Read flow.get('link_costs') and flow.get('link_order').\n- Find smallest Source as hexadecimal number.\n- For that source, sort destinations as hexadecimal numbers.\n- Create one msg per destination:\n    msg.url = 'https://api.thingspeak.com/update?api_key=WRITE_API_KEY&field1=' + cost\n- Return an array of messages so the delay node queues them.\n*/\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 250,
+    "y": 1040,
+    "wires": [
+      [
+        "c3_delay_thingspeak"
+      ]
+    ]
+  },
+  {
+    "id": "c3_delay_thingspeak",
+    "type": "delay",
+    "z": "c3_tab_main",
+    "name": "ThingSpeak 1 msg / 20s",
+    "pauseType": "rate",
+    "timeout": "5",
+    "timeoutUnits": "seconds",
+    "rate": "1",
+    "nbRateUnits": "20",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 520,
+    "y": 1040,
+    "wires": [
+      [
+        "c3_http_thingspeak"
+      ]
+    ]
+  },
+  {
+    "id": "c3_http_thingspeak",
+    "type": "http request",
+    "z": "c3_tab_main",
+    "name": "HTTP update ThingSpeak",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 800,
+    "y": 1040,
+    "wires": [
+      [
+        "c3_debug_thingspeak"
+      ]
+    ]
+  },
+  {
+    "id": "c3_debug_thingspeak",
+    "type": "debug",
+    "z": "c3_tab_main",
+    "name": "ThingSpeak response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1060,
+    "y": 1040,
+    "wires": []
+  },
+  {
+    "id": "c3_ui_tab",
+    "type": "ui_tab",
+    "name": "Challenge 3",
+    "icon": "dashboard"
+  },
+  {
+    "id": "c3_ui_group",
+    "type": "ui_group",
+    "name": "Filtered Attributes",
+    "tab": "c3_ui_tab",
+    "order": 1,
+    "disp": true,
+    "width": "6"
+  }
 ]
