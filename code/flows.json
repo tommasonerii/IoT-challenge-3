@@ -171,7 +171,7 @@
     "type": "comment",
     "z": "c3_tab_main",
     "name": "2) ID generator: press Start, then every 1s -> MQTT publish + id_log.csv",
-    "info": "Start generator enables generation. Stop generator disables it. Init/reset also disables generation.",
+    "info": "Start generator enables ID generation. Stop generator disables it. Init/reset also disables generation. The generator stops automatically after the subscriber completes 200 received IDs to avoid an oversized id_log.csv.",
     "x": 300,
     "y": 230,
     "wires": []
@@ -338,7 +338,7 @@
     "type": "comment",
     "z": "c3_tab_main",
     "name": "3) Subscriber: count 200 IDs, compute N, read challenge3.csv, classify packet",
-    "info": "The CSV node must output one array message. If it outputs one message per row, change its mode in the node settings.",
+    "info": "The 200-ID limit is enforced on the subscriber branch. The CSV node must output one array message. If it outputs one message per row, change its mode in the node settings.",
     "x": 390,
     "y": 380,
     "wires": []
@@ -477,8 +477,8 @@
     "id": "c3_comment_zcl",
     "type": "comment",
     "z": "c3_tab_main",
-    "name": "4) ZBEE_ZCL: publish to ZigBee/<device>, queue rate limit 10/min, then filtered_elems + charts",
-    "info": "Topic must be ZigBee/<Device Name ZigBee Source>. Delay node must queue, not drop.",
+    "name": "4) ZBEE_ZCL: publish to ZigBee/<device>, queue 10/min, then filtered_elems + charts",
+    "info": "Topic must be ZigBee/<Device Name ZigBee Source>, and msg.topic must match payload.topic. The delay node must queue messages, not drop them.",
     "x": 450,
     "y": 590,
     "wires": []
@@ -665,7 +665,7 @@
     "type": "comment",
     "z": "c3_tab_main",
     "name": "5) Link Status: update final costs, preserve processing order in outgoing_cost.csv",
-    "info": "Do not sort outgoing_cost.csv. Sort only later for ThingSpeak.",
+    "info": "Filter Link Status packets by Packet Type. Do not sort outgoing_cost.csv; preserve processing order. Sort only later for ThingSpeak.",
     "x": 410,
     "y": 840,
     "wires": []
@@ -695,7 +695,7 @@
     "type": "comment",
     "z": "c3_tab_main",
     "name": "6) After 200 IDs: smallest source, sort destinations hex, send costs to ThingSpeak every 20s",
-    "info": "Put your ThingSpeak WRITE_API_KEY in the prepare function.",
+    "info": "The ThingSpeak API key is read from THINGSPEAK_WRITE_API_KEY. Keep it in .env, not in flows.json. The delay node must queue messages at one update every 20 seconds.",
     "x": 450,
     "y": 980,
     "wires": []
