@@ -33,7 +33,6 @@
 \newcommand{\personcode}{10817232}
 \newcommand{\groupinfo}{Individual submission}
 \newcommand{\todoanswer}[1]{\textbf{\textcolor{red}{#1}}}
-\newcommand{\thingspeaklink}{\todoanswer{Insert public ThingSpeak channel link / ID}}
 
 \newcommand{\maybeincludegraphics}[3]{
   \IfFileExists{#1}{
@@ -69,9 +68,9 @@ using the MQTT-based identifier generator required by the assignment. The flow
 uses a local Mosquitto broker on \texttt{localhost:1884}, publishes and
 subscribes to the topic \texttt{challenge3/id\_generator}, extracts the CSV row
 identified by:
-\begin{center}
+\[
   N = ID \bmod 5218,
-\end{center}
+\]
 and handles the two required packet classes:
 
 \begin{itemize}
@@ -156,9 +155,9 @@ The \texttt{mqtt in} node subscribes to
 \texttt{challenge3/id\_generator} on the local broker. The function
 \texttt{count <=200 + N=id\%5218} parses the JSON payload, extracts the ID,
 increments the subscriber-side counter, and computes:
-\begin{center}
+\[
   N = ID \bmod 5218.
-\end{center}
+\]
 
 When the received ID counter reaches 200, the flow variable
 \texttt{challenge\_done} is set. Further messages are not processed.
@@ -216,9 +215,9 @@ parses the command string and searches for the required attributes:
 
 The function keeps the positional association required by the assignment:
 \begin{center}
-  \texttt{Attribute[i]} \leftrightarrow
-  \texttt{Status[i]} \leftrightarrow
-  \texttt{Data Type[i]} \leftrightarrow
+  \texttt{Attribute[i]} $\leftrightarrow$
+  \texttt{Status[i]} $\leftrightarrow$
+  \texttt{Data Type[i]} $\leftrightarrow$
   \texttt{Data Value[i]}.
 \end{center}
 
@@ -320,11 +319,10 @@ configured in queue mode and enforces one update every 20 seconds.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.86\linewidth]{report_assets/thingspeak_field1_updates.png}
-\caption{ThingSpeak field1 update sequence generated from the selected outgoing costs.}
+\includegraphics[width=0.86\linewidth]{report_assets/image.png}
+\caption{ ThingSpeak chart for field1 outgoing cost updates.}
 \end{figure}
 
-\textbf{Public ThingSpeak channel:} \thingspeaklink
 
 \section*{Produced Deliverables}
 
