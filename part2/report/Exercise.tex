@@ -1,0 +1,175 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!50!black,
+  pdftitle={IoT Challenge 3 -- Part 2 (Exercise)},
+  pdfauthor={Tommaso Neri}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\renewcommand{\arraystretch}{1.18}
+\linespread{1.04}
+
+\newcommand{\coursename}{Internet of Things Lab}
+\newcommand{\challengename}{IoT Challenge \#3 -- Part 2 (Exercise)}
+\newcommand{\authorname}{Tommaso Neri}
+\newcommand{\personcode}{10817232}
+\newcommand{\groupinfo}{Individual submission}
+\newcommand{\answer}[1]{\textbf{\textcolor{red}{#1}}}
+
+\title{\challengename}
+\author{
+  \authorname\\
+  Person Code: \personcode\\
+  \groupinfo
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\section*{Scenario and Parameters}
+
+The LoRaWAN network operates in Europe at carrier frequency $868$ MHz with
+bandwidth $125$ kHz. It has one gateway and:
+\[
+  N = 40
+\]
+sensor nodes. Each node transmits packets with payload size 20 bytes according
+to a Poisson process with intensity:
+\[
+  \lambda = 2\ \mathrm{packets/minute}
+  = \frac{2}{60}\ \mathrm{packets/second}
+  = \frac{1}{30}\ \mathrm{packets/second}.
+\]
+
+All nodes are assumed to use the same spreading factor. Following the simplified
+ALOHA model used in the course material, the packet success rate is:
+\[
+  P_{\mathrm{success}} =
+  \exp\left(-2N\lambda T_{\mathrm{air}}\right),
+\]
+where $T_{\mathrm{air}}$ is the packet airtime in seconds.
+
+\section*{EQ1: Largest SF with at Least 75\% Packet Success Rate}
+
+The target condition is:
+\[
+  \exp\left(-2N\lambda T_{\mathrm{air}}\right) \geq 0.75.
+\]
+
+Solving it for $T_{\mathrm{air}}$ gives:
+\[
+\begin{aligned}
+T_{\mathrm{air}}
+  &\leq \frac{-\ln(0.75)}{2N\lambda} \\
+  &= \frac{-\ln(0.75)}{2 \cdot 40 \cdot \frac{1}{30}} \\
+  &= 0.10788\ \mathrm{s} \\
+  &= 107.88\ \mathrm{ms}.
+\end{aligned}
+\]
+
+Therefore, the largest acceptable spreading factor is the largest SF whose
+airtime is not greater than about $107.88$ ms.
+
+\subsection*{Airtime Calculation}
+
+The airtimes below are computed using the TTN LoRaWAN airtime calculator
+(\url{https://www.thethingsnetwork.org/airtime-calculator}) with the parameters
+specified by the assignment:
+
+\begin{itemize}
+    \item input bytes: 20;
+    \item region: Europe 863--870 MHz;
+    \item bandwidth: 125 kHz;
+    \item spreading factor varied from SF7 to SF12.
+\end{itemize}
+
+The TTN calculator is a LoRaWAN airtime calculator: the 20 input bytes are the
+application payload bytes, and the calculator includes the LoRaWAN overhead in
+the time-on-air result. The carrier frequency does not affect airtime.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ccc}
+\toprule
+SF & TTN time on air [ms] & ALOHA success rate \\
+\midrule
+7  & 71.9   & 82.54\% \\
+8  & 133.6  & 70.02\% \\
+9  & 246.8  & 51.78\% \\
+10 & 452.6  & 29.91\% \\
+11 & 987.1  & 7.19\% \\
+12 & 1810.4 & 0.80\% \\
+\bottomrule
+\end{tabular}
+\caption{TTN airtime and ALOHA success rate for 20 input bytes at BW 125 kHz.}
+\end{table}
+
+SF7 is below the maximum allowed airtime:
+\[
+  T_{\mathrm{air,SF7}} = 71.9\ \mathrm{ms} < 107.88\ \mathrm{ms},
+\]
+and its success rate is:
+\[
+  P_{\mathrm{success,SF7}}
+  = \exp\left(-2 \cdot 40 \cdot \frac{1}{30} \cdot 0.0719\right)
+  \approx 0.8254.
+\]
+
+SF8 is already above the airtime threshold when using the TTN LoRaWAN airtime
+calculator:
+\[
+  T_{\mathrm{air,SF8}} = 133.6\ \mathrm{ms} > 107.88\ \mathrm{ms},
+\]
+and its success rate drops to about $70.02\%$.
+
+\textbf{Answer EQ1:} \answer{Using the TTN LoRaWAN airtime calculator with 20 input bytes, the largest spreading factor that guarantees at least 75\% packet success rate is SF7.}
+
+\section*{EQ2: Field Deployment with Non-Uniform Performance}
+
+The measured packet success rate is significantly lower than expected, and the
+performance is not uniform across nodes: some nodes work relatively well, while
+others have very poor delivery rates.
+
+The most appropriate action is:
+\[
+  \answer{\text{2. Move the nodes closer to the gateway.}}
+\]
+
+The non-uniformity across nodes suggests a coverage or link-budget problem.
+Nodes that are farther from the gateway, or in worse propagation conditions,
+may have received power close to or below the receiver sensitivity, causing poor
+delivery even if the collision model predicted a better average success rate.
+
+Decreasing the number of nodes would reduce the offered traffic and therefore
+the collision probability, but it would mainly address a global congestion
+problem. It does not directly explain why only some nodes perform very poorly.
+
+Increasing the spreading factor can improve sensitivity and range, but it also
+increases packet airtime. Longer airtime increases the probability of overlap
+and collisions in the ALOHA model. Therefore, increasing SF is not the best
+first action when the problem is non-uniform and likely related to node
+placement or coverage.
+
+\textbf{Answer EQ2:} \answer{Move the nodes closer to the gateway, because the observed non-uniform delivery rate points to coverage/link-budget issues rather than only network-wide congestion.}
+
+\end{document}

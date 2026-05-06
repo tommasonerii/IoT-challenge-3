@@ -1,804 +1,812 @@
 [
-  {
-    "id": "c3_tab_main",
-    "type": "tab",
-    "label": "Challenge 3 - Base Layout",
-    "disabled": false,
-    "info": "Base layout for IoT Challenge 3: ID generator, MQTT subscription, CSV dispatch, ZBEE_ZCL branch, Link Status branch, ThingSpeak branch and dashboard charts.",
-    "env": []
-  },
-  {
-    "id": "c3_broker_local",
-    "type": "mqtt-broker",
-    "name": "Local Mosquitto 1884",
-    "broker": "localhost",
-    "port": "1884",
-    "clientid": "",
-    "autoConnect": true,
-    "usetls": false,
-    "protocolVersion": "4",
-    "keepalive": "60",
-    "cleansession": true,
-    "birthTopic": "",
-    "birthQos": "0",
-    "birthPayload": "",
-    "birthMsg": {},
-    "closeTopic": "",
-    "closeQos": "0",
-    "closePayload": "",
-    "closeMsg": {},
-    "willTopic": "",
-    "willQos": "0",
-    "willPayload": "",
-    "willMsg": {},
-    "userProps": "",
-    "sessionExpiry": ""
-  },
-  {
-    "id": "c3_comment_setup",
-    "type": "comment",
-    "z": "c3_tab_main",
-    "name": "1) Start here: init/reset CSV files and counters",
-    "info": "Click this inject before running the challenge. It resets flow counters and rewrites CSV headers.",
-    "x": 250,
-    "y": 40,
-    "wires": []
-  },
-  {
-    "id": "c3_inject_init",
-    "type": "inject",
-    "z": "c3_tab_main",
-    "name": "Init/reset files",
-    "props": [
-      {
-        "p": "payload"
-      }
-    ],
-    "repeat": "",
-    "crontab": "",
-    "once": false,
-    "onceDelay": 0.1,
-    "topic": "",
-    "payload": "",
-    "payloadType": "date",
-    "x": 120,
-    "y": 90,
-    "wires": [
-      [
-        "c3_fn_init"
-      ]
-    ]
-  },
-  {
-    "id": "c3_fn_init",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "reset counters + CSV headers",
-    "func": "flow.set('id_log_no', 0);\nflow.set('id_rx_count', 0);\nflow.set('filtered_no', 0);\nflow.set('link_costs', {});\nflow.set('link_order', []);\nflow.set('challenge_done', false);\nflow.set('thingspeak_started', false);\nflow.set('generator_enabled', false);\n\nreturn [\n    { payload: 'No.,ID,TIMESTAMP\\n' },\n    { payload: 'No.,Timestamp,Sequence Number, Attribute,Status,Data Type,Data Value\\n' },\n    { payload: 'No.,Source,Destination,Cost\\n' },\n    { payload: 'Challenge 3 state reset. Generator is stopped.' }\n];",
-    "outputs": 4,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 340,
-    "y": 90,
-    "wires": [
-      [
-        "c3_file_idlog_overwrite"
-      ],
-      [
-        "c3_file_filtered_overwrite"
-      ],
-      [
-        "c3_file_outgoing_overwrite"
-      ],
-      [
-        "c3_debug_init"
-      ]
-    ]
-  },
-  {
-    "id": "c3_file_idlog_overwrite",
-    "type": "file",
-    "z": "c3_tab_main",
-    "name": "write id_log.csv header",
-    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\id_log.csv",
-    "filenameType": "str",
-    "appendNewline": false,
-    "createDir": true,
-    "overwriteFile": "true",
-    "encoding": "none",
-    "x": 620,
-    "y": 50,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "c3_file_filtered_overwrite",
-    "type": "file",
-    "z": "c3_tab_main",
-    "name": "write filtered_elems.csv header",
-    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\filtered_elems.csv",
-    "filenameType": "str",
-    "appendNewline": false,
-    "createDir": true,
-    "overwriteFile": "true",
-    "encoding": "none",
-    "x": 650,
-    "y": 90,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "c3_file_outgoing_overwrite",
-    "type": "file",
-    "z": "c3_tab_main",
-    "name": "write outgoing_cost.csv",
-    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\outgoing_cost.csv",
-    "filenameType": "str",
-    "appendNewline": false,
-    "createDir": true,
-    "overwriteFile": "true",
-    "encoding": "none",
-    "x": 620,
-    "y": 130,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "c3_debug_init",
-    "type": "debug",
-    "z": "c3_tab_main",
-    "name": "init debug",
-    "active": true,
-    "tosidebar": true,
-    "console": false,
-    "tostatus": false,
-    "complete": "payload",
-    "targetType": "msg",
-    "statusVal": "",
-    "statusType": "auto",
-    "x": 590,
-    "y": 170,
-    "wires": []
-  },
-  {
-    "id": "c3_comment_generator",
-    "type": "comment",
-    "z": "c3_tab_main",
-    "name": "2) ID generator: press Start, then every 1s -> MQTT publish + id_log.csv",
-    "info": "Start generator enables ID generation. Stop generator disables it. Init/reset also disables generation. The generator stops automatically after the subscriber completes 200 received IDs to avoid an oversized id_log.csv.",
-    "x": 300,
-    "y": 230,
-    "wires": []
-  },
-  {
-    "id": "c3_inject_start",
-    "type": "inject",
-    "z": "c3_tab_main",
-    "name": "Start generator",
-    "props": [
-      {
-        "p": "payload"
-      }
-    ],
-    "repeat": "",
-    "crontab": "",
-    "once": false,
-    "onceDelay": 0.1,
-    "topic": "",
-    "payload": "true",
-    "payloadType": "bool",
-    "x": 120,
-    "y": 250,
-    "wires": [
-      [
-        "c3_fn_set_generator"
-      ]
-    ]
-  },
-  {
-    "id": "c3_inject_stop",
-    "type": "inject",
-    "z": "c3_tab_main",
-    "name": "Stop generator",
-    "props": [
-      {
-        "p": "payload"
-      }
-    ],
-    "repeat": "",
-    "crontab": "",
-    "once": false,
-    "onceDelay": 0.1,
-    "topic": "",
-    "payload": "false",
-    "payloadType": "bool",
-    "x": 120,
-    "y": 300,
-    "wires": [
-      [
-        "c3_fn_set_generator"
-      ]
-    ]
-  },
-  {
-    "id": "c3_fn_set_generator",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "set generator enabled",
-    "func": "const enabled = msg.payload === true;\nflow.set('generator_enabled', enabled);\nmsg.payload = enabled ? 'Generator started' : 'Generator stopped';\nreturn msg;",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 340,
-    "y": 275,
-    "wires": [
-      [
-        "c3_debug_init"
-      ]
-    ]
-  },
-  {
-    "id": "c3_inject_generator",
-    "type": "inject",
-    "z": "c3_tab_main",
-    "name": "1s generator tick",
-    "props": [
-      {
-        "p": "payload"
-      },
-      {
-        "p": "topic",
-        "vt": "str"
-      }
-    ],
-    "repeat": "1",
-    "crontab": "",
-    "once": false,
-    "onceDelay": 0.1,
-    "topic": "",
-    "payload": "",
-    "payloadType": "date",
-    "x": 130,
-    "y": 350,
-    "wires": [
-      [
-        "c3_fn_generate_id"
-      ]
-    ]
-  },
-  {
-    "id": "c3_fn_generate_id",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "generate MQTT ID + CSV row",
-    "func": "if (!flow.get('generator_enabled')) {\n    return null;\n}\n\nif (flow.get('challenge_done')) {\n    flow.set('generator_enabled', false);\n    node.status({ fill: 'green', shape: 'ring', text: 'stopped after 200 received IDs' });\n    return null;\n}\n\nconst id = Math.floor(Math.random() * 30001);\nconst timestamp = Math.floor(Date.now() / 1000);\nconst no = (flow.get('id_log_no') || 0) + 1;\nflow.set('id_log_no', no);\nnode.status({ fill: 'blue', shape: 'dot', text: `generated ${no}` });\n\nconst mqttMsg = {\n    topic: 'challenge3/id_generator',\n    payload: JSON.stringify({ id, timestamp })\n};\n\nconst csvMsg = {\n    payload: `${no},${id},${timestamp}\\n`\n};\n\nreturn [mqttMsg, csvMsg];",
-    "outputs": 2,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 390,
-    "y": 350,
-    "wires": [
-      [
-        "c3_mqtt_id_out"
-      ],
-      [
-        "c3_file_idlog_append"
-      ]
-    ]
-  },
-  {
-    "id": "c3_mqtt_id_out",
-    "type": "mqtt out",
-    "z": "c3_tab_main",
-    "name": "publish challenge3/id_generator",
-    "topic": "",
-    "qos": "",
-    "retain": "",
-    "respTopic": "",
-    "contentType": "",
-    "userProps": "",
-    "correl": "",
-    "expiry": "",
-    "broker": "c3_broker_local",
-    "x": 710,
-    "y": 330,
-    "wires": []
-  },
-  {
-    "id": "c3_file_idlog_append",
-    "type": "file",
-    "z": "c3_tab_main",
-    "name": "append id_log.csv",
-    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\id_log.csv",
-    "filenameType": "str",
-    "appendNewline": false,
-    "createDir": true,
-    "overwriteFile": "false",
-    "encoding": "none",
-    "x": 680,
-    "y": 380,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "c3_comment_sub",
-    "type": "comment",
-    "z": "c3_tab_main",
-    "name": "3) Subscriber: count 200 IDs, compute N, read challenge3.csv, classify packet",
-    "info": "The 200-ID limit is enforced on the subscriber branch. The CSV node must output one array message. If it outputs one message per row, change its mode in the node settings.",
-    "x": 390,
-    "y": 380,
-    "wires": []
-  },
-  {
-    "id": "c3_mqtt_id_in",
-    "type": "mqtt in",
-    "z": "c3_tab_main",
-    "name": "subscribe IDs",
-    "topic": "challenge3/id_generator",
-    "qos": "0",
-    "datatype": "auto-detect",
-    "broker": "c3_broker_local",
-    "nl": false,
-    "rap": true,
-    "rh": 0,
-    "inputs": 0,
-    "x": 110,
-    "y": 430,
-    "wires": [
-      [
-        "c3_fn_count_id"
-      ]
-    ]
-  },
-  {
-    "id": "c3_fn_count_id",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "count <=200 + N=id%5218",
-    "func": "if (flow.get('challenge_done')) {\n    return null;\n}\n\nlet payload = msg.payload;\nif (typeof payload === 'string') {\n    payload = JSON.parse(payload);\n}\n\nconst id = Number(payload.id);\nif (!Number.isFinite(id)) {\n    node.error('Invalid ID payload', msg);\n    return null;\n}\n\nconst count = (flow.get('id_rx_count') || 0) + 1;\nflow.set('id_rx_count', count);\n\nmsg.sub_id = id;\nmsg.sub_timestamp = payload.timestamp;\nmsg.id_rx_count = count;\nmsg.N = id % 5218;\n\nif (count >= 200) {\n    flow.set('challenge_done', true);\n}\n\nreturn msg;",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 340,
-    "y": 430,
-    "wires": [
-      [
-        "c3_filein_csv"
-      ]
-    ]
-  },
-  {
-    "id": "c3_filein_csv",
-    "type": "file in",
-    "z": "c3_tab_main",
-    "name": "read challenge3.csv",
-    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\docs\\challenge3.csv",
-    "filenameType": "str",
-    "format": "utf8",
-    "chunk": false,
-    "sendError": true,
-    "encoding": "none",
-    "allProps": false,
-    "x": 590,
-    "y": 430,
-    "wires": [
-      [
-        "c3_csv_parse"
-      ]
-    ]
-  },
-  {
-    "id": "c3_csv_parse",
-    "type": "csv",
-    "z": "c3_tab_main",
-    "name": "parse CSV to array",
-    "sep": ",",
-    "hdrin": true,
-    "hdrout": "none",
-    "multi": "one",
-    "ret": "\\n",
-    "temp": "",
-    "skip": "0",
-    "strings": true,
-    "include_empty_strings": "",
-    "include_null_values": "",
-    "x": 810,
-    "y": 430,
-    "wires": [
-      [
-        "c3_fn_select_classify"
-      ]
-    ]
-  },
-  {
-    "id": "c3_fn_select_classify",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "select Packet Number N + classify",
-    "func": "let row = null;\n\nif (Array.isArray(msg.payload)) {\n    row = msg.payload.find(r => Number(r['Packet Number']) === Number(msg.N));\n} else if (msg.payload && typeof msg.payload === 'object') {\n    if (Number(msg.payload['Packet Number']) !== Number(msg.N)) {\n        return null;\n    }\n    row = msg.payload;\n} else {\n    node.error('Unexpected CSV payload format', msg);\n    return null;\n}\n\nif (!row) {\n    node.warn(`No CSV row found for Packet Number ${msg.N}`);\n    return null;\n}\n\nmsg.csvRow = row;\nmsg.commandString = row['Command String'] || '';\n\nconst isZcl = msg.commandString.includes('ZBEE_ZCL');\nconst isLinkStatus = row['Packet Type'] === 'Link Status (0x08)';\n\nlet doneMsg = null;\nif (flow.get('challenge_done') && !flow.get('thingspeak_started')) {\n    flow.set('thingspeak_started', true);\n    doneMsg = { payload: '200 ID messages processed' };\n}\n\nif (isZcl) {\n    return [msg, null, doneMsg, null];\n}\nif (isLinkStatus) {\n    return [null, msg, doneMsg, null];\n}\nreturn [null, null, doneMsg, msg];",
-    "outputs": 4,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 1080,
-    "y": 430,
-    "wires": [
-      [
-        "c3_fn_prepare_zcl"
-      ],
-      [
-        "c3_fn_link_status"
-      ],
-      [
-        "c3_fn_prepare_thingspeak"
-      ],
-      [
-        "c3_debug_ignored"
-      ]
-    ]
-  },
-  {
-    "id": "c3_debug_ignored",
-    "type": "debug",
-    "z": "c3_tab_main",
-    "name": "ignored packet debug",
-    "active": false,
-    "tosidebar": true,
-    "console": false,
-    "tostatus": false,
-    "complete": "N",
-    "targetType": "msg",
-    "statusVal": "",
-    "statusType": "auto",
-    "x": 1330,
-    "y": 520,
-    "wires": []
-  },
-  {
-    "id": "c3_comment_zcl",
-    "type": "comment",
-    "z": "c3_tab_main",
-    "name": "4) ZBEE_ZCL: publish to ZigBee/<device>, queue 10/min, then filtered_elems + charts",
-    "info": "Topic must be ZigBee/<Device Name ZigBee Source>, and msg.topic must match payload.topic. The delay node must queue messages, not drop them.",
-    "x": 450,
-    "y": 590,
-    "wires": []
-  },
-  {
-    "id": "c3_fn_prepare_zcl",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "prepare ZBEE_ZCL MQTT payload",
-    "func": "const row = msg.csvRow;\nconst rawDev = row['Device Name ZigBee Source'];\nconst dev = String(rawDev || '').trim().replace(/[#+\\u0000]/g, '_');\n\nif (!dev) {\n    node.warn('Missing Device Name ZigBee Source, skipping ZBEE_ZCL publish');\n    return null;\n}\n\nconst topic = 'ZigBee/' + dev;\nconst currentTimestamp = Math.floor(Date.now() / 1000);\n\nmsg.topic = topic;\nmsg.currentTimestamp = currentTimestamp;\nmsg.payload = JSON.stringify({\n    timestamp: currentTimestamp,\n    id: msg.sub_id,\n    'wpan.src': row['Source Address'],\n    'wpan.dst': row['Destination Address'],\n    'zbee.src': row['Source Address ZigBee'],\n    'zbee.dst': row['Destination Address ZigBee'],\n    topic: topic,\n    payload: row['Command String']\n});\n\nreturn msg;",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 260,
-    "y": 650,
-    "wires": [
-      [
-        "c3_delay_zcl"
-      ]
-    ]
-  },
-  {
-    "id": "c3_delay_zcl",
-    "type": "delay",
-    "z": "c3_tab_main",
-    "name": "rate limit 10/min queue",
-    "pauseType": "rate",
-    "timeout": "5",
-    "timeoutUnits": "seconds",
-    "rate": "10",
-    "nbRateUnits": "1",
-    "rateUnits": "minute",
-    "randomFirst": "1",
-    "randomLast": "5",
-    "randomUnits": "seconds",
-    "drop": false,
-    "allowrate": false,
-    "outputs": 1,
-    "x": 520,
-    "y": 650,
-    "wires": [
-      [
-        "c3_mqtt_zcl_out",
-        "c3_fn_filtered_attrs"
-      ]
-    ]
-  },
-  {
-    "id": "c3_mqtt_zcl_out",
-    "type": "mqtt out",
-    "z": "c3_tab_main",
-    "name": "publish ZigBee/<device>",
-    "topic": "",
-    "qos": "",
-    "retain": "",
-    "respTopic": "",
-    "contentType": "",
-    "userProps": "",
-    "correl": "",
-    "expiry": "",
-    "broker": "c3_broker_local",
-    "x": 800,
-    "y": 620,
-    "wires": []
-  },
-  {
-    "id": "c3_fn_filtered_attrs",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "parse filtered attrs",
-    "func": "function parseCommandString(text) {\n    try {\n        return JSON.parse(String(text || '').replace(/'/g, '\"'));\n    } catch (err) {\n        node.warn('Cannot parse Command String: ' + err.message);\n        return null;\n    }\n}\n\nfunction asArray(value) {\n    if (Array.isArray(value)) return value;\n    if (value === undefined || value === null || value === '') return [];\n    return [value];\n}\n\nfunction cleanLabel(value) {\n    return String(value || '').replace(/\\s*\\([^)]*\\)/g, '').trim();\n}\n\nfunction valueKeyForType(dataType) {\n    const t = String(dataType || '').toLowerCase();\n    if (t.includes('16-bit signed integer')) return 'Int16';\n    if (t.includes('16-bit unsigned integer')) return 'Uint16';\n    if (t.includes('8-bit signed integer')) return 'Int8';\n    if (t.includes('8-bit unsigned integer')) return 'Uint8';\n    if (t.includes('32-bit signed integer')) return 'Int32';\n    if (t.includes('32-bit unsigned integer')) return 'Uint32';\n    if (t.includes('48-bit unsigned integer')) return 'Uint48';\n    return null;\n}\n\nfunction rawValueAt(command, dataTypes, index) {\n    const key = valueKeyForType(dataTypes[index]);\n    if (!key || command[key] === undefined || command[key] === null) return null;\n\n    const values = command[key];\n    const sameTypeIndex = dataTypes.slice(0, index + 1)\n        .filter(dt => valueKeyForType(dt) === key).length - 1;\n\n    if (Array.isArray(values)) return values[sameTypeIndex] !== undefined ? values[sameTypeIndex] : null;\n    return sameTypeIndex === 0 ? values : null;\n}\n\nfunction cleanValue(value) {\n    const text = String(value || '').trim();\n    const match = text.match(/^-?\\d+(?:\\.\\d+)?/);\n    return match ? match[0] : text;\n}\n\nconst command = parseCommandString(msg.csvRow && msg.csvRow['Command String']);\nif (!command) return null;\n\nconst attrs = asArray(command.Attribute);\nconst statuses = asArray(command.Status);\nconst dataTypes = asArray(command['Data Type']);\nconst wanted = ['Active Power', 'RMS Current', 'RMS Voltage'];\nconst timestamp = msg.currentTimestamp || Math.floor(Date.now() / 1000);\nconst seq = command['Sequence Number'];\n\nconst csvMsgs = [];\nconst currentMsgs = [];\nconst voltageMsgs = [];\n\nfor (let i = 0; i < attrs.length; i++) {\n    const attr = cleanLabel(attrs[i]);\n    if (!wanted.includes(attr)) continue;\n\n    const statusRaw = statuses[i];\n    const dataTypeRaw = dataTypes[i];\n    const valueRaw = rawValueAt(command, dataTypes, i);\n\n    if (statusRaw === undefined || dataTypeRaw === undefined || valueRaw === null) {\n        continue;\n    }\n\n    const no = (flow.get('filtered_no') || 0) + 1;\n    flow.set('filtered_no', no);\n\n    const status = cleanLabel(statusRaw);\n    const dataType = cleanLabel(dataTypeRaw);\n    const value = cleanValue(valueRaw);\n    const csvLine = no + ',' + timestamp + ',' + seq + ',' + attr + ',' + status + ',' + dataType + ',' + value + '\\n';\n    csvMsgs.push({ payload: csvLine });\n\n    const numericValue = Number(value);\n    if (Number.isFinite(numericValue) && attr === 'RMS Current') {\n        currentMsgs.push({ payload: numericValue, topic: 'RMS Current' });\n    }\n    if (Number.isFinite(numericValue) && attr === 'RMS Voltage') {\n        voltageMsgs.push({ payload: numericValue, topic: 'RMS Voltage' });\n    }\n}\n\nif (csvMsgs.length || currentMsgs.length || voltageMsgs.length) {\n    node.send([\n        csvMsgs.length ? csvMsgs : null,\n        currentMsgs.length ? currentMsgs : null,\n        voltageMsgs.length ? voltageMsgs : null\n    ]);\n}\n\nreturn null;",
-    "outputs": 3,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 790,
-    "y": 700,
-    "wires": [
-      [
-        "c3_file_filtered_append"
-      ],
-      [
-        "c3_chart_current"
-      ],
-      [
-        "c3_chart_voltage"
-      ]
-    ]
-  },
-  {
-    "id": "c3_file_filtered_append",
-    "type": "file",
-    "z": "c3_tab_main",
-    "name": "append filtered_elems.csv",
-    "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\filtered_elems.csv",
-    "filenameType": "str",
-    "appendNewline": false,
-    "createDir": true,
-    "overwriteFile": "false",
-    "encoding": "none",
-    "x": 1070,
-    "y": 660,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "c3_chart_current",
-    "type": "ui_chart",
-    "z": "c3_tab_main",
-    "name": "RMS Current chart",
-    "group": "c3_ui_group",
-    "order": 1,
-    "width": 0,
-    "height": 0,
-    "label": "RMS Current",
-    "chartType": "line",
-    "legend": "false",
-    "xformat": "HH:mm:ss",
-    "interpolate": "linear",
-    "nodata": "",
-    "dot": false,
-    "ymin": "",
-    "ymax": "",
-    "removeOlder": 1,
-    "removeOlderPoints": "",
-    "removeOlderUnit": "3600",
-    "cutout": 0,
-    "useOneColor": false,
-    "colors": [
-      "#1f77b4",
-      "#aec7e8",
-      "#ff7f0e"
-    ],
-    "useOldStyle": false,
-    "x": 1060,
-    "y": 710,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "c3_chart_voltage",
-    "type": "ui_chart",
-    "z": "c3_tab_main",
-    "name": "RMS Voltage chart",
-    "group": "c3_ui_group",
-    "order": 2,
-    "width": 0,
-    "height": 0,
-    "label": "RMS Voltage",
-    "chartType": "line",
-    "legend": "false",
-    "xformat": "HH:mm:ss",
-    "interpolate": "linear",
-    "nodata": "",
-    "dot": false,
-    "ymin": "",
-    "ymax": "",
-    "removeOlder": 1,
-    "removeOlderPoints": "",
-    "removeOlderUnit": "3600",
-    "cutout": 0,
-    "useOneColor": false,
-    "colors": [
-      "#d62728",
-      "#ff9896",
-      "#2ca02c"
-    ],
-    "useOldStyle": false,
-    "x": 1060,
-    "y": 760,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "c3_comment_link",
-    "type": "comment",
-    "z": "c3_tab_main",
-    "name": "5) Link Status: update final costs, preserve processing order in outgoing_cost.csv",
-    "info": "Filter Link Status packets by Packet Type. Do not sort outgoing_cost.csv; preserve processing order. Sort only later for ThingSpeak.",
-    "x": 410,
-    "y": 840,
-    "wires": []
-  },
-  {
-    "id": "c3_fn_link_status",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "parse Link Status",
-    "func": "function parseCommandString(text) {\n    try {\n        return JSON.parse(String(text || '').replace(/'/g, '\"'));\n    } catch (err) {\n        node.warn('Cannot parse Link Status Command String: ' + err.message);\n        return null;\n    }\n}\n\nconst row = msg.csvRow;\nconst command = parseCommandString(row && row['Command String']);\nif (!command || !Array.isArray(command.Links)) return null;\n\nconst source = row['Source Address ZigBee'];\nif (!source) return null;\n\nconst costs = flow.get('link_costs') || {};\nconst order = flow.get('link_order') || [];\n\nfor (const link of command.Links) {\n    const destination = link.Address;\n    const cost = link['Outgoing Cost'];\n    if (!destination || cost === undefined || cost === null) continue;\n\n    const key = source + '|' + destination;\n    if (!costs[key]) {\n        order.push({ source: source, destination: destination });\n    }\n    costs[key] = { source: source, destination: destination, cost: String(cost) };\n}\n\nflow.set('link_costs', costs);\nflow.set('link_order', order);\n\nlet csv = 'No.,Source,Destination,Cost\\n';\nlet no = 1;\nfor (const item of order) {\n    const key = item.source + '|' + item.destination;\n    const current = costs[key];\n    if (!current) continue;\n    csv += no + ',' + current.source + ',' + current.destination + ',' + current.cost + '\\n';\n    no += 1;\n}\n\nreturn { payload: csv };",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 230,
-    "y": 900,
-    "wires": [
-      [
-        "c3_file_outgoing_overwrite"
-      ]
-    ]
-  },
-  {
-    "id": "c3_comment_thingspeak",
-    "type": "comment",
-    "z": "c3_tab_main",
-    "name": "6) After 200 IDs: smallest source, sort destinations hex, send costs to ThingSpeak every 20s",
-    "info": "The ThingSpeak API key is read from THINGSPEAK_WRITE_API_KEY. Keep it in .env, not in flows.json. The delay node must queue messages at one update every 20 seconds.",
-    "x": 450,
-    "y": 980,
-    "wires": []
-  },
-  {
-    "id": "c3_fn_prepare_thingspeak",
-    "type": "function",
-    "z": "c3_tab_main",
-    "name": "prepare ThingSpeak messages",
-    "func": "const WRITE_API_KEY = env.get('THINGSPEAK_WRITE_API_KEY');\n\nif (!WRITE_API_KEY) {\n    node.warn('THINGSPEAK_WRITE_API_KEY is not configured; skipping HTTP updates');\n    return null;\n}\n\nconst costs = flow.get('link_costs') || {};\nconst order = flow.get('link_order') || [];\nconst sources = Array.from(new Set(order.map(item => item.source)));\n\nif (sources.length === 0) {\n    node.warn('No outgoing costs available for ThingSpeak');\n    return null;\n}\n\nsources.sort((a, b) => parseInt(a, 16) - parseInt(b, 16));\nconst minSource = sources[0];\nconst destinations = order\n    .filter(item => item.source === minSource)\n    .map(item => item.destination)\n    .filter((value, index, arr) => arr.indexOf(value) === index)\n    .sort((a, b) => parseInt(a, 16) - parseInt(b, 16));\n\nfor (const destination of destinations) {\n    const key = minSource + '|' + destination;\n    const item = costs[key];\n    if (!item) continue;\n\n    node.send({\n        url: 'https://api.thingspeak.com/update?api_key=' + WRITE_API_KEY + '&field1=' + encodeURIComponent(item.cost),\n        payload: item.cost,\n        source: minSource,\n        destination: destination\n    });\n}\n\nreturn null;",
-    "outputs": 1,
-    "timeout": 0,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 250,
-    "y": 1040,
-    "wires": [
-      [
-        "c3_delay_thingspeak"
-      ]
-    ]
-  },
-  {
-    "id": "c3_delay_thingspeak",
-    "type": "delay",
-    "z": "c3_tab_main",
-    "name": "ThingSpeak 1 msg / 20s",
-    "pauseType": "rate",
-    "timeout": "5",
-    "timeoutUnits": "seconds",
-    "rate": "1",
-    "nbRateUnits": "20",
-    "rateUnits": "second",
-    "randomFirst": "1",
-    "randomLast": "5",
-    "randomUnits": "seconds",
-    "drop": false,
-    "allowrate": false,
-    "outputs": 1,
-    "x": 520,
-    "y": 1040,
-    "wires": [
-      [
-        "c3_http_thingspeak"
-      ]
-    ]
-  },
-  {
-    "id": "c3_http_thingspeak",
-    "type": "http request",
-    "z": "c3_tab_main",
-    "name": "HTTP update ThingSpeak",
-    "method": "GET",
-    "ret": "txt",
-    "paytoqs": "ignore",
-    "url": "",
-    "tls": "",
-    "persist": false,
-    "proxy": "",
-    "insecureHTTPParser": false,
-    "authType": "",
-    "senderr": false,
-    "headers": [],
-    "x": 800,
-    "y": 1040,
-    "wires": [
-      [
-        "c3_debug_thingspeak"
-      ]
-    ]
-  },
-  {
-    "id": "c3_debug_thingspeak",
-    "type": "debug",
-    "z": "c3_tab_main",
-    "name": "ThingSpeak response",
-    "active": true,
-    "tosidebar": true,
-    "console": false,
-    "tostatus": false,
-    "complete": "payload",
-    "targetType": "msg",
-    "statusVal": "",
-    "statusType": "auto",
-    "x": 1060,
-    "y": 1040,
-    "wires": []
-  },
-  {
-    "id": "c3_ui_tab",
-    "type": "ui_tab",
-    "name": "Challenge 3",
-    "icon": "dashboard"
-  },
-  {
-    "id": "c3_ui_group",
-    "type": "ui_group",
-    "name": "Filtered Attributes",
-    "tab": "c3_ui_tab",
-    "order": 1,
-    "disp": true,
-    "width": "6"
-  }
+    {
+        "id": "c3_tab_main",
+        "type": "tab",
+        "label": "Challenge 3 - Base Layout",
+        "disabled": false,
+        "info": "Base layout for IoT Challenge 3: ID generator, MQTT subscription, CSV dispatch, ZBEE_ZCL branch, Link Status branch, ThingSpeak branch and dashboard charts.",
+        "env": []
+    },
+    {
+        "id": "c3_comment_setup",
+        "type": "comment",
+        "z": "c3_tab_main",
+        "name": "1) Start here: init/reset CSV files and counters",
+        "info": "Click this inject before running the challenge. It resets flow counters and rewrites CSV headers.",
+        "x": 190,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "c3_inject_init",
+        "type": "inject",
+        "z": "c3_tab_main",
+        "name": "Init/reset files",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 90,
+        "wires": [
+            [
+                "c3_fn_init"
+            ]
+        ]
+    },
+    {
+        "id": "c3_fn_init",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "reset counters + CSV headers",
+        "func": "flow.set('id_log_no', 0);\nflow.set('id_rx_count', 0);\nflow.set('filtered_no', 0);\nflow.set('link_costs', {});\nflow.set('link_order', []);\nflow.set('challenge_done', false);\nflow.set('thingspeak_started', false);\nflow.set('generator_enabled', false);\n\nreturn [\n    { payload: 'No.,ID,TIMESTAMP\\n' },\n    { payload: 'No.,Timestamp,Sequence Number, Attribute,Status,Data Type,Data Value\\n' },\n    { payload: 'No.,Source,Destination,Cost\\n' },\n    { payload: 'Challenge 3 state reset. Generator is stopped.' }\n];",
+        "outputs": 4,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 90,
+        "wires": [
+            [
+                "c3_file_idlog_overwrite"
+            ],
+            [
+                "c3_file_filtered_overwrite"
+            ],
+            [
+                "c3_file_outgoing_overwrite"
+            ],
+            [
+                "c3_debug_init"
+            ]
+        ]
+    },
+    {
+        "id": "c3_file_idlog_overwrite",
+        "type": "file",
+        "z": "c3_tab_main",
+        "name": "write id_log.csv header",
+        "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\id_log.csv",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 620,
+        "y": 50,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c3_file_filtered_overwrite",
+        "type": "file",
+        "z": "c3_tab_main",
+        "name": "write filtered_elems.csv header",
+        "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\filtered_elems.csv",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 650,
+        "y": 90,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c3_file_outgoing_overwrite",
+        "type": "file",
+        "z": "c3_tab_main",
+        "name": "write outgoing_cost.csv",
+        "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\outgoing_cost.csv",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 710,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c3_debug_init",
+        "type": "debug",
+        "z": "c3_tab_main",
+        "name": "init debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 660,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "c3_comment_generator",
+        "type": "comment",
+        "z": "c3_tab_main",
+        "name": "2) ID generator: press Start, then every 1s -> MQTT publish + id_log.csv",
+        "info": "Start generator enables ID generation. Stop generator disables it. Init/reset also disables generation. The generator stops automatically after the subscriber completes 200 received IDs to avoid an oversized id_log.csv.",
+        "x": 270,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "c3_inject_start",
+        "type": "inject",
+        "z": "c3_tab_main",
+        "name": "Start generator",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 120,
+        "y": 300,
+        "wires": [
+            [
+                "c3_fn_set_generator"
+            ]
+        ]
+    },
+    {
+        "id": "c3_inject_stop",
+        "type": "inject",
+        "z": "c3_tab_main",
+        "name": "Stop generator",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "false",
+        "payloadType": "bool",
+        "x": 120,
+        "y": 350,
+        "wires": [
+            [
+                "c3_fn_set_generator"
+            ]
+        ]
+    },
+    {
+        "id": "c3_fn_set_generator",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "set generator enabled",
+        "func": "const enabled = msg.payload === true;\nflow.set('generator_enabled', enabled);\nmsg.payload = enabled ? 'Generator started' : 'Generator stopped';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 325,
+        "wires": [
+            [
+                "c3_debug_init"
+            ]
+        ]
+    },
+    {
+        "id": "c3_inject_generator",
+        "type": "inject",
+        "z": "c3_tab_main",
+        "name": "1s generator tick",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 400,
+        "wires": [
+            [
+                "c3_fn_generate_id"
+            ]
+        ]
+    },
+    {
+        "id": "c3_fn_generate_id",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "generate MQTT ID + CSV row",
+        "func": "if (!flow.get('generator_enabled')) {\n    return null;\n}\n\nif (flow.get('challenge_done')) {\n    flow.set('generator_enabled', false);\n    node.status({ fill: 'green', shape: 'ring', text: 'stopped after 200 received IDs' });\n    return null;\n}\n\nconst id = Math.floor(Math.random() * 30001);\nconst timestamp = Math.floor(Date.now() / 1000);\nconst no = (flow.get('id_log_no') || 0) + 1;\nflow.set('id_log_no', no);\nnode.status({ fill: 'blue', shape: 'dot', text: `generated ${no}` });\n\nconst mqttMsg = {\n    topic: 'challenge3/id_generator',\n    payload: JSON.stringify({ id, timestamp })\n};\n\nconst csvMsg = {\n    payload: `${no},${id},${timestamp}\\n`\n};\n\nreturn [mqttMsg, csvMsg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 400,
+        "wires": [
+            [
+                "c3_mqtt_id_out"
+            ],
+            [
+                "c3_file_idlog_append"
+            ]
+        ]
+    },
+    {
+        "id": "c3_mqtt_id_out",
+        "type": "mqtt out",
+        "z": "c3_tab_main",
+        "name": "publish challenge3/id_generator",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "c3_broker_local",
+        "x": 710,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "c3_file_idlog_append",
+        "type": "file",
+        "z": "c3_tab_main",
+        "name": "append id_log.csv",
+        "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\id_log.csv",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 680,
+        "y": 430,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c3_comment_sub",
+        "type": "comment",
+        "z": "c3_tab_main",
+        "name": "3) Subscriber: count 200 IDs, compute N, read challenge3.csv, classify packet",
+        "info": "The 200-ID limit is enforced on the subscriber branch. The CSV node must output one array message. If it outputs one message per row, change its mode in the node settings.",
+        "x": 290,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "c3_mqtt_id_in",
+        "type": "mqtt in",
+        "z": "c3_tab_main",
+        "name": "subscribe IDs",
+        "topic": "challenge3/id_generator",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "c3_broker_local",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 110,
+        "y": 520,
+        "wires": [
+            [
+                "c3_fn_count_id"
+            ]
+        ]
+    },
+    {
+        "id": "c3_fn_count_id",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "count <=200 + N=id%5218",
+        "func": "if (flow.get('challenge_done')) {\n    return null;\n}\n\nlet payload = msg.payload;\nif (typeof payload === 'string') {\n    payload = JSON.parse(payload);\n}\n\nconst id = Number(payload.id);\nif (!Number.isFinite(id)) {\n    node.error('Invalid ID payload', msg);\n    return null;\n}\n\nconst count = (flow.get('id_rx_count') || 0) + 1;\nflow.set('id_rx_count', count);\n\nmsg.sub_id = id;\nmsg.sub_timestamp = payload.timestamp;\nmsg.id_rx_count = count;\nmsg.N = id % 5218;\n\nif (count >= 200) {\n    flow.set('challenge_done', true);\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 520,
+        "wires": [
+            [
+                "c3_filein_csv"
+            ]
+        ]
+    },
+    {
+        "id": "c3_filein_csv",
+        "type": "file in",
+        "z": "c3_tab_main",
+        "name": "read challenge3.csv",
+        "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\docs\\challenge3.csv",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": true,
+        "encoding": "none",
+        "allProps": false,
+        "x": 590,
+        "y": 520,
+        "wires": [
+            [
+                "c3_csv_parse"
+            ]
+        ]
+    },
+    {
+        "id": "c3_csv_parse",
+        "type": "csv",
+        "z": "c3_tab_main",
+        "name": "parse CSV to array",
+        "sep": ",",
+        "hdrin": true,
+        "hdrout": "none",
+        "multi": "one",
+        "ret": "\\n",
+        "temp": "",
+        "skip": "0",
+        "strings": true,
+        "include_empty_strings": "",
+        "include_null_values": "",
+        "x": 810,
+        "y": 520,
+        "wires": [
+            [
+                "c3_fn_select_classify"
+            ]
+        ]
+    },
+    {
+        "id": "c3_fn_select_classify",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "select Packet Number N + classify",
+        "func": "let row = null;\n\nif (Array.isArray(msg.payload)) {\n    row = msg.payload.find(r => Number(r['Packet Number']) === Number(msg.N));\n} else if (msg.payload && typeof msg.payload === 'object') {\n    if (Number(msg.payload['Packet Number']) !== Number(msg.N)) {\n        return null;\n    }\n    row = msg.payload;\n} else {\n    node.error('Unexpected CSV payload format', msg);\n    return null;\n}\n\nif (!row) {\n    node.warn(`No CSV row found for Packet Number ${msg.N}`);\n    return null;\n}\n\nmsg.csvRow = row;\nmsg.commandString = row['Command String'] || '';\n\nconst isZcl = msg.commandString.includes('ZBEE_ZCL');\nconst isLinkStatus = row['Packet Type'] === 'Link Status (0x08)';\n\nlet doneMsg = null;\nif (flow.get('challenge_done') && !flow.get('thingspeak_started')) {\n    flow.set('thingspeak_started', true);\n    doneMsg = { payload: '200 ID messages processed' };\n}\n\nif (isZcl) {\n    return [msg, null, doneMsg, null];\n}\nif (isLinkStatus) {\n    return [null, msg, doneMsg, null];\n}\nreturn [null, null, doneMsg, msg];",
+        "outputs": 4,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1080,
+        "y": 520,
+        "wires": [
+            [
+                "c3_fn_prepare_zcl"
+            ],
+            [
+                "c3_fn_link_status"
+            ],
+            [
+                "c3_fn_prepare_thingspeak"
+            ],
+            [
+                "c3_debug_ignored"
+            ]
+        ]
+    },
+    {
+        "id": "c3_debug_ignored",
+        "type": "debug",
+        "z": "c3_tab_main",
+        "name": "ignored packet debug",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "N",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1380,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "c3_comment_zcl",
+        "type": "comment",
+        "z": "c3_tab_main",
+        "name": "4) ZBEE_ZCL: publish to ZigBee/<device>, queue 10/min, then filtered_elems + charts",
+        "info": "Topic must be ZigBee/<Device Name ZigBee Source>, and msg.topic must match payload.topic. The delay node must queue messages, not drop them.",
+        "x": 1840,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "c3_fn_prepare_zcl",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "prepare ZBEE_ZCL MQTT payload",
+        "func": "const row = msg.csvRow;\nconst rawDev = row['Device Name ZigBee Source'];\nconst dev = String(rawDev || '').trim().replace(/[#+\\u0000]/g, '_');\n\nif (!dev) {\n    node.warn('Missing Device Name ZigBee Source, skipping ZBEE_ZCL publish');\n    return null;\n}\n\nconst topic = 'ZigBee/' + dev;\nconst currentTimestamp = Math.floor(Date.now() / 1000);\n\nmsg.topic = topic;\nmsg.currentTimestamp = currentTimestamp;\nmsg.payload = JSON.stringify({\n    timestamp: currentTimestamp,\n    id: msg.sub_id,\n    'wpan.src': row['Source Address'],\n    'wpan.dst': row['Destination Address'],\n    'zbee.src': row['Source Address ZigBee'],\n    'zbee.dst': row['Destination Address ZigBee'],\n    topic: topic,\n    payload: row['Command String']\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1690,
+        "y": 130,
+        "wires": [
+            [
+                "c3_delay_zcl"
+            ]
+        ]
+    },
+    {
+        "id": "c3_delay_zcl",
+        "type": "delay",
+        "z": "c3_tab_main",
+        "name": "rate limit 10/min queue",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "10",
+        "nbRateUnits": "1",
+        "rateUnits": "minute",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1950,
+        "y": 130,
+        "wires": [
+            [
+                "c3_mqtt_zcl_out",
+                "c3_fn_filtered_attrs"
+            ]
+        ]
+    },
+    {
+        "id": "c3_mqtt_zcl_out",
+        "type": "mqtt out",
+        "z": "c3_tab_main",
+        "name": "publish ZigBee/<device>",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "c3_broker_local",
+        "x": 2230,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "c3_fn_filtered_attrs",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "parse filtered attrs",
+        "func": "function parseCommandString(text) {\n    try {\n        return JSON.parse(String(text || '').replace(/'/g, '\"'));\n    } catch (err) {\n        node.warn('Cannot parse Command String: ' + err.message);\n        return null;\n    }\n}\n\nfunction asArray(value) {\n    if (Array.isArray(value)) return value;\n    if (value === undefined || value === null || value === '') return [];\n    return [value];\n}\n\nfunction cleanLabel(value) {\n    return String(value || '').replace(/\\s*\\([^)]*\\)/g, '').trim();\n}\n\nfunction valueKeyForType(dataType) {\n    const t = String(dataType || '').toLowerCase();\n    if (t.includes('16-bit signed integer')) return 'Int16';\n    if (t.includes('16-bit unsigned integer')) return 'Uint16';\n    if (t.includes('8-bit signed integer')) return 'Int8';\n    if (t.includes('8-bit unsigned integer')) return 'Uint8';\n    if (t.includes('32-bit signed integer')) return 'Int32';\n    if (t.includes('32-bit unsigned integer')) return 'Uint32';\n    if (t.includes('48-bit unsigned integer')) return 'Uint48';\n    return null;\n}\n\nfunction rawValueAt(command, dataTypes, index) {\n    const key = valueKeyForType(dataTypes[index]);\n    if (!key || command[key] === undefined || command[key] === null) return null;\n\n    const values = command[key];\n    const sameTypeIndex = dataTypes.slice(0, index + 1)\n        .filter(dt => valueKeyForType(dt) === key).length - 1;\n\n    if (Array.isArray(values)) return values[sameTypeIndex] !== undefined ? values[sameTypeIndex] : null;\n    return sameTypeIndex === 0 ? values : null;\n}\n\nfunction cleanValue(value) {\n    const text = String(value || '').trim();\n    const match = text.match(/^-?\\d+(?:\\.\\d+)?/);\n    return match ? match[0] : text;\n}\n\nconst command = parseCommandString(msg.csvRow && msg.csvRow['Command String']);\nif (!command) return null;\n\nconst attrs = asArray(command.Attribute);\nconst statuses = asArray(command.Status);\nconst dataTypes = asArray(command['Data Type']);\nconst wanted = ['Active Power', 'RMS Current', 'RMS Voltage'];\nconst timestamp = msg.currentTimestamp || Math.floor(Date.now() / 1000);\nconst seq = command['Sequence Number'];\n\nconst csvMsgs = [];\nconst currentMsgs = [];\nconst voltageMsgs = [];\n\nfor (let i = 0; i < attrs.length; i++) {\n    const attr = cleanLabel(attrs[i]);\n    if (!wanted.includes(attr)) continue;\n\n    const statusRaw = statuses[i];\n    const dataTypeRaw = dataTypes[i];\n    const valueRaw = rawValueAt(command, dataTypes, i);\n\n    if (statusRaw === undefined || dataTypeRaw === undefined || valueRaw === null) {\n        continue;\n    }\n\n    const no = (flow.get('filtered_no') || 0) + 1;\n    flow.set('filtered_no', no);\n\n    const status = cleanLabel(statusRaw);\n    const dataType = cleanLabel(dataTypeRaw);\n    const value = cleanValue(valueRaw);\n    const csvLine = no + ',' + timestamp + ',' + seq + ',' + attr + ',' + status + ',' + dataType + ',' + value + '\\n';\n    csvMsgs.push({ payload: csvLine });\n\n    const numericValue = Number(value);\n    if (Number.isFinite(numericValue) && attr === 'RMS Current') {\n        currentMsgs.push({ payload: numericValue, topic: 'RMS Current' });\n    }\n    if (Number.isFinite(numericValue) && attr === 'RMS Voltage') {\n        voltageMsgs.push({ payload: numericValue, topic: 'RMS Voltage' });\n    }\n}\n\nif (csvMsgs.length || currentMsgs.length || voltageMsgs.length) {\n    node.send([\n        csvMsgs.length ? csvMsgs : null,\n        currentMsgs.length ? currentMsgs : null,\n        voltageMsgs.length ? voltageMsgs : null\n    ]);\n}\n\nreturn null;",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2220,
+        "y": 180,
+        "wires": [
+            [
+                "c3_file_filtered_append"
+            ],
+            [
+                "c3_chart_current"
+            ],
+            [
+                "c3_chart_voltage"
+            ]
+        ]
+    },
+    {
+        "id": "c3_file_filtered_append",
+        "type": "file",
+        "z": "c3_tab_main",
+        "name": "append filtered_elems.csv",
+        "filename": "C:\\Users\\Tommaso\\Code\\Iot3\\filtered_elems.csv",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 2500,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c3_chart_current",
+        "type": "ui_chart",
+        "z": "c3_tab_main",
+        "name": "RMS Current chart",
+        "group": "c3_ui_group",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "RMS Current",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e"
+        ],
+        "outputs": 1,
+        "x": 2490,
+        "y": 190,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c3_chart_voltage",
+        "type": "ui_chart",
+        "z": "c3_tab_main",
+        "name": "RMS Voltage chart",
+        "group": "c3_ui_group",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "label": "RMS Voltage",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "colors": [
+            "#d62728",
+            "#ff9896",
+            "#2ca02c"
+        ],
+        "outputs": 1,
+        "x": 2490,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c3_comment_link",
+        "type": "comment",
+        "z": "c3_tab_main",
+        "name": "5) Link Status: update final costs, preserve processing order in outgoing_cost.csv",
+        "info": "Filter Link Status packets by Packet Type. Do not sort outgoing_cost.csv; preserve processing order. Sort only later for ThingSpeak.",
+        "x": 1820,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "c3_fn_link_status",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "parse Link Status",
+        "func": "function parseCommandString(text) {\n    try {\n        return JSON.parse(String(text || '').replace(/'/g, '\"'));\n    } catch (err) {\n        node.warn('Cannot parse Link Status Command String: ' + err.message);\n        return null;\n    }\n}\n\nconst row = msg.csvRow;\nconst command = parseCommandString(row && row['Command String']);\nif (!command || !Array.isArray(command.Links)) return null;\n\nconst source = row['Source Address ZigBee'];\nif (!source) return null;\n\nconst costs = flow.get('link_costs') || {};\nconst order = flow.get('link_order') || [];\n\nfor (const link of command.Links) {\n    const destination = link.Address;\n    const cost = link['Outgoing Cost'];\n    if (!destination || cost === undefined || cost === null) continue;\n\n    const key = source + '|' + destination;\n    if (!costs[key]) {\n        order.push({ source: source, destination: destination });\n    }\n    costs[key] = { source: source, destination: destination, cost: String(cost) };\n}\n\nflow.set('link_costs', costs);\nflow.set('link_order', order);\n\nlet csv = 'No.,Source,Destination,Cost\\n';\nlet no = 1;\nfor (const item of order) {\n    const key = item.source + '|' + item.destination;\n    const current = costs[key];\n    if (!current) continue;\n    csv += no + ',' + current.source + ',' + current.destination + ',' + current.cost + '\\n';\n    no += 1;\n}\n\nreturn { payload: csv };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1660,
+        "y": 380,
+        "wires": [
+            [
+                "c3_file_outgoing_overwrite"
+            ]
+        ]
+    },
+    {
+        "id": "c3_comment_thingspeak",
+        "type": "comment",
+        "z": "c3_tab_main",
+        "name": "6) After 200 IDs: smallest source, sort destinations hex, send costs to ThingSpeak every 20s",
+        "info": "The ThingSpeak API key is read from THINGSPEAK_WRITE_API_KEY. Keep it in .env, not in flows.json. The delay node must queue messages at one update every 20 seconds.",
+        "x": 1860,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "c3_fn_prepare_thingspeak",
+        "type": "function",
+        "z": "c3_tab_main",
+        "name": "prepare ThingSpeak messages",
+        "func": "const WRITE_API_KEY = env.get('THINGSPEAK_WRITE_API_KEY');\n\nif (!WRITE_API_KEY) {\n    node.warn('THINGSPEAK_WRITE_API_KEY is not configured; skipping HTTP updates');\n    return null;\n}\n\nconst costs = flow.get('link_costs') || {};\nconst order = flow.get('link_order') || [];\nconst sources = Array.from(new Set(order.map(item => item.source)));\n\nif (sources.length === 0) {\n    node.warn('No outgoing costs available for ThingSpeak');\n    return null;\n}\n\nsources.sort((a, b) => parseInt(a, 16) - parseInt(b, 16));\nconst minSource = sources[0];\nconst destinations = order\n    .filter(item => item.source === minSource)\n    .map(item => item.destination)\n    .filter((value, index, arr) => arr.indexOf(value) === index)\n    .sort((a, b) => parseInt(a, 16) - parseInt(b, 16));\n\nfor (const destination of destinations) {\n    const key = minSource + '|' + destination;\n    const item = costs[key];\n    if (!item) continue;\n\n    node.send({\n        url: 'https://api.thingspeak.com/update?api_key=' + WRITE_API_KEY + '&field1=' + encodeURIComponent(item.cost),\n        payload: item.cost,\n        source: minSource,\n        destination: destination\n    });\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1680,
+        "y": 520,
+        "wires": [
+            [
+                "c3_delay_thingspeak"
+            ]
+        ]
+    },
+    {
+        "id": "c3_delay_thingspeak",
+        "type": "delay",
+        "z": "c3_tab_main",
+        "name": "ThingSpeak 1 msg / 20s",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "20",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1950,
+        "y": 520,
+        "wires": [
+            [
+                "c3_http_thingspeak"
+            ]
+        ]
+    },
+    {
+        "id": "c3_http_thingspeak",
+        "type": "http request",
+        "z": "c3_tab_main",
+        "name": "HTTP update ThingSpeak",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 2230,
+        "y": 520,
+        "wires": [
+            [
+                "c3_debug_thingspeak"
+            ]
+        ]
+    },
+    {
+        "id": "c3_debug_thingspeak",
+        "type": "debug",
+        "z": "c3_tab_main",
+        "name": "ThingSpeak response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2490,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "c3_broker_local",
+        "type": "mqtt-broker",
+        "name": "Local Mosquitto 1884",
+        "broker": "localhost",
+        "port": "1884",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "c3_ui_group",
+        "type": "ui_group",
+        "name": "Filtered Attributes",
+        "tab": "c3_ui_tab",
+        "order": 1,
+        "disp": true,
+        "width": "6"
+    },
+    {
+        "id": "c3_ui_tab",
+        "type": "ui_tab",
+        "name": "Challenge 3",
+        "icon": "dashboard"
+    },
+    {
+        "id": "c88cfe590b1f4b2a",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.6"
+        }
+    }
 ]
