@@ -2,6 +2,12 @@
 
 Checklist operativa per completare la challenge.
 
+## 0. Contesto locale
+
+- [x] Aggiornare `AGENTS.md`: dopo ogni risposta che modifica o verifica il lavoro, mantenere aggiornati `README.md` e `TODO.md`.
+- [x] Aggiornare `README.md` con la nota sui file di contesto locale.
+- [x] Ristrutturare `README.md` in formato operativo/professionale: stato progetto, quick start, layout, configurazione, architettura, deliverable, validazione e troubleshooting.
+
 ## 1. Ambiente
 
 - [x] Verificare che Mosquitto sia installato.
@@ -216,6 +222,7 @@ airtime <= -ln(0.75) / (2 * 40 * (1/30))
 - [x] Usare TTN airtime calculator per payload 20 byte, BW 125 kHz.
 - [x] Trovare il piu' grande SF con success rate >= 75%.
 - [x] Motivare EQ1.
+- [ ] Verificare coerenza EQ1: `Exercise.tex` conclude `SF7` usando il TTN LoRaWAN airtime calculator con overhead incluso; le note locali indicano `SF8` come candidato atteso.
 - [x] Rispondere EQ2 scegliendo:
 
 ```text
@@ -227,7 +234,7 @@ Move the nodes closer to the gateway
 ## 10. Report
 
 - [x] Esportare flow Node-RED come JSON.
-- [ ] Salvare export in:
+- [x] Salvare export in:
 
 ```text
 nodered.txt
@@ -241,24 +248,24 @@ nodered.txt
   - [x] screenshot chart RMS Voltage
   - [x] ThingSpeak channel ID/link
 
-- [ ] Compilare `Challenge.pdf`.
+- [x] Compilare `Challenge.pdf`.
 
 - [x] Creare sorgente LaTeX `part2/report/Exercise.tex` con:
   - [x] nomi e person code
   - [x] risposta EQ1
   - [x] risposta EQ2
 
-- [ ] Compilare `Exercise.pdf`.
+- [x] Compilare `Exercise.pdf`.
 
 ## 11. Consegna
 
-- [ ] Verificare presenza file:
-  - [ ] `Challenge.pdf`
-  - [ ] `Exercise.pdf`
-  - [ ] `nodered.txt`
-  - [ ] `id_log.csv`
-  - [ ] `filtered_elems.csv`
-  - [ ] `outgoing_cost.csv`
+- [x] Verificare presenza file in `delivery/`:
+  - [x] `Challenge.pdf`
+  - [x] `Exercise.pdf`
+  - [x] `nodered.txt`
+  - [x] `id_log.csv`
+  - [x] `filtered_elems.csv`
+  - [x] `outgoing_cost.csv`
 
 - [ ] Creare ZIP con nome corretto.
 
@@ -270,7 +277,7 @@ Per team da due:
 
 - [ ] Caricare ZIP su WeBeep.
 - [ ] Compilare form.
-- [ ] Verificare che il canale ThingSpeak sia pubblico.
+- [x] Verificare che il canale ThingSpeak sia pubblico.
 - [ ] Consegnare entro:
 
 ```text

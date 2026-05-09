@@ -10,6 +10,8 @@ Linee guida per agenti che lavorano su questo repository della Challenge 3 IoT.
 - Mantieni le modifiche piccole e mirate. Non fare refactor non richiesti.
 - Non cancellare o rigenerare CSV/output esistenti senza un motivo esplicito.
 - Non committare segreti. La key ThingSpeak deve restare fuori da `code/flows.json` e stare in `.env` come `THINGSPEAK_WRITE_API_KEY`.
+- Dopo ogni risposta che modifica o verifica il lavoro, aggiorna il contesto locale per rispecchiare cio' che e' stato fatto.
+- I file di contesto locale da mantenere aggiornati sono `TODO.md` e `README.md`.
 
 ## File principali
 
